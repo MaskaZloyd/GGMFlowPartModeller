@@ -1,0 +1,45 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "win_default",
+      "displayName": "Windows default build",
+      "description": "Default build with Ninja for x86_64 Windows",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external" 
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILLER": "D:\\msys64\\mingw64\\bin\\clang-cl.exe",
+        "CMAKE_CXX_COMPILLER": "D:\\msys64\\mingw64\\bin\\clang-cl.exe",
+        "CMAKE_COMPILE_COMANDS": "ON",
+        "CMAKE_TOOLCHAIN_FILE": {
+        "value": "D:/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "type": "FILEPATH"
+        }
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release",
+      "displayName": "Release",
+      "configurePreset": "win_default",
+      "configuration": "Release"
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "configurePreset": "win_default",
+      "configuration": "Debug"
+    }
+  ]
+}
