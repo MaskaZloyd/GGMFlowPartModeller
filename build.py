@@ -17,6 +17,14 @@ def build_config() -> None:
         ['cmake', '--build', '--preset=debug'],
         check=True,
     )
+    subprocess.call(
+        r'copy /Y .\build\compile_commands.json .\compile_commands.json',
+        shell=True,
+    )
+    subprocess.run(
+        [r'.\build\GGMFlowPartModeller.exe'],
+        check=True,
+    )
 
 
 if __name__ == '__main__':
