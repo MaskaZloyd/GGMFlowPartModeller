@@ -1,0 +1,32 @@
+[
+{
+  "directory": "E:/dev/GGMFlowPartModeller/out/build/win",
+  "command": "D:\\msys64\\ucrt64\\bin\\g++.exe -DMINGW_HAS_SECURE_API=1 -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NEEDS_QMAIN -DQT_OPENGLWIDGETS_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64 -IE:/dev/GGMFlowPartModeller/out/build/win/GGMFlowPartModeller_autogen/include -isystem E:/dev/GGMFlowPartModeller/lib/qcustomplot -isystem D:/Qt/6.5.1/mingw_64/include/QtCore -isystem D:/Qt/6.5.1/mingw_64/include -isystem D:/Qt/6.5.1/mingw_64/mkspecs/win32-g++ -isystem D:/Qt/6.5.1/mingw_64/include/QtWidgets -isystem D:/Qt/6.5.1/mingw_64/include/QtGui -isystem D:/Qt/6.5.1/mingw_64/include/QtOpenGL -isystem D:/Qt/6.5.1/mingw_64/include/QtOpenGLWidgets -g -std=gnu++20 -o CMakeFiles\\GGMFlowPartModeller.dir\\GGMFlowPartModeller_autogen\\mocs_compilation.cpp.obj -c E:\\dev\\GGMFlowPartModeller\\out\\build\\win\\GGMFlowPartModeller_autogen\\mocs_compilation.cpp",
+  "file": "E:\\dev\\GGMFlowPartModeller\\out\\build\\win\\GGMFlowPartModeller_autogen\\mocs_compilation.cpp",
+  "output": "CMakeFiles\\GGMFlowPartModeller.dir\\GGMFlowPartModeller_autogen\\mocs_compilation.cpp.obj"
+},
+{
+  "directory": "E:/dev/GGMFlowPartModeller/out/build/win",
+  "command": "D:\\msys64\\ucrt64\\bin\\g++.exe -DMINGW_HAS_SECURE_API=1 -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NEEDS_QMAIN -DQT_OPENGLWIDGETS_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64 -IE:/dev/GGMFlowPartModeller/out/build/win/GGMFlowPartModeller_autogen/include -isystem E:/dev/GGMFlowPartModeller/lib/qcustomplot -isystem D:/Qt/6.5.1/mingw_64/include/QtCore -isystem D:/Qt/6.5.1/mingw_64/include -isystem D:/Qt/6.5.1/mingw_64/mkspecs/win32-g++ -isystem D:/Qt/6.5.1/mingw_64/include/QtWidgets -isystem D:/Qt/6.5.1/mingw_64/include/QtGui -isystem D:/Qt/6.5.1/mingw_64/include/QtOpenGL -isystem D:/Qt/6.5.1/mingw_64/include/QtOpenGLWidgets -g -std=gnu++20 -o CMakeFiles\\GGMFlowPartModeller.dir\\src\\ggmfpm_entrypoint.cpp.obj -c E:\\dev\\GGMFlowPartModeller\\src\\ggmfpm_entrypoint.cpp",
+  "file": "E:\\dev\\GGMFlowPartModeller\\src\\ggmfpm_entrypoint.cpp",
+  "output": "CMakeFiles\\GGMFlowPartModeller.dir\\src\\ggmfpm_entrypoint.cpp.obj"
+},
+{
+  "directory": "E:/dev/GGMFlowPartModeller/out/build/win",
+  "command": "D:\\msys64\\ucrt64\\bin\\g++.exe -DMINGW_HAS_SECURE_API=1 -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NEEDS_QMAIN -DQT_OPENGLWIDGETS_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64 -IE:/dev/GGMFlowPartModeller/out/build/win/GGMFlowPartModeller_autogen/include -isystem E:/dev/GGMFlowPartModeller/lib/qcustomplot -isystem D:/Qt/6.5.1/mingw_64/include/QtCore -isystem D:/Qt/6.5.1/mingw_64/include -isystem D:/Qt/6.5.1/mingw_64/mkspecs/win32-g++ -isystem D:/Qt/6.5.1/mingw_64/include/QtWidgets -isystem D:/Qt/6.5.1/mingw_64/include/QtGui -isystem D:/Qt/6.5.1/mingw_64/include/QtOpenGL -isystem D:/Qt/6.5.1/mingw_64/include/QtOpenGLWidgets -g -std=gnu++20 -o CMakeFiles\\GGMFlowPartModeller.dir\\src\\ggmfpm_mainwindow.cpp.obj -c E:\\dev\\GGMFlowPartModeller\\src\\ggmfpm_mainwindow.cpp",
+  "file": "E:\\dev\\GGMFlowPartModeller\\src\\ggmfpm_mainwindow.cpp",
+  "output": "CMakeFiles\\GGMFlowPartModeller.dir\\src\\ggmfpm_mainwindow.cpp.obj"
+},
+{
+  "directory": "E:/dev/GGMFlowPartModeller/out/build/win",
+  "command": "D:\\msys64\\ucrt64\\bin\\g++.exe -DMINGW_HAS_SECURE_API=1 -DQCustomPlot_EXPORTS -DQT_CORE_LIB -DQT_GUI_LIB -DQT_PRINTSUPPORT_LIB -DQT_WIDGETS_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64 -IE:/dev/GGMFlowPartModeller/out/build/win/lib/qcustomplot/QCustomPlot_autogen/include -isystem D:/Qt/6.5.1/mingw_64/include/QtCore -isystem D:/Qt/6.5.1/mingw_64/include -isystem D:/Qt/6.5.1/mingw_64/mkspecs/win32-g++ -isystem D:/Qt/6.5.1/mingw_64/include/QtGui -isystem D:/Qt/6.5.1/mingw_64/include/QtPrintSupport -isystem D:/Qt/6.5.1/mingw_64/include/QtWidgets -g -std=gnu++20 -o lib\\qcustomplot\\CMakeFiles\\QCustomPlot.dir\\QCustomPlot_autogen\\mocs_compilation.cpp.obj -c E:\\dev\\GGMFlowPartModeller\\out\\build\\win\\lib\\qcustomplot\\QCustomPlot_autogen\\mocs_compilation.cpp",
+  "file": "E:\\dev\\GGMFlowPartModeller\\out\\build\\win\\lib\\qcustomplot\\QCustomPlot_autogen\\mocs_compilation.cpp",
+  "output": "lib\\qcustomplot\\CMakeFiles\\QCustomPlot.dir\\QCustomPlot_autogen\\mocs_compilation.cpp.obj"
+},
+{
+  "directory": "E:/dev/GGMFlowPartModeller/out/build/win",
+  "command": "D:\\msys64\\ucrt64\\bin\\g++.exe -DMINGW_HAS_SECURE_API=1 -DQCustomPlot_EXPORTS -DQT_CORE_LIB -DQT_GUI_LIB -DQT_PRINTSUPPORT_LIB -DQT_WIDGETS_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64 -IE:/dev/GGMFlowPartModeller/out/build/win/lib/qcustomplot/QCustomPlot_autogen/include -isystem D:/Qt/6.5.1/mingw_64/include/QtCore -isystem D:/Qt/6.5.1/mingw_64/include -isystem D:/Qt/6.5.1/mingw_64/mkspecs/win32-g++ -isystem D:/Qt/6.5.1/mingw_64/include/QtGui -isystem D:/Qt/6.5.1/mingw_64/include/QtPrintSupport -isystem D:/Qt/6.5.1/mingw_64/include/QtWidgets -g -std=gnu++20 -o lib\\qcustomplot\\CMakeFiles\\QCustomPlot.dir\\qcustomplot.cpp.obj -c E:\\dev\\GGMFlowPartModeller\\lib\\qcustomplot\\qcustomplot.cpp",
+  "file": "E:\\dev\\GGMFlowPartModeller\\lib\\qcustomplot\\qcustomplot.cpp",
+  "output": "lib\\qcustomplot\\CMakeFiles\\QCustomPlot.dir\\qcustomplot.cpp.obj"
+}
+]
