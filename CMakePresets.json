@@ -1,45 +1,40 @@
 {
-  "version": 6,
-  "cmakeMinimumRequired": {
-    "major": 3,
-    "minor": 23,
-    "patch": 0
-  },
-  "configurePresets": [
-    {
-      "name": "win_default",
-      "displayName": "Windows default build",
-      "description": "Default build with Ninja for x86_64 Windows",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
-      "architecture": {
-        "value": "x64",
-        "strategy": "external" 
-      },
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_C_COMPILLER": "D:\\msys64\\mingw64\\bin\\clang-cl.exe",
-        "CMAKE_CXX_COMPILLER": "D:\\msys64\\mingw64\\bin\\clang-cl.exe",
-        "CMAKE_COMPILE_COMANDS": "ON",
-        "CMAKE_TOOLCHAIN_FILE": {
-        "value": "D:/vcpkg/scripts/buildsystems/vcpkg.cmake",
-        "type": "FILEPATH"
+    "version": 2,
+    "configurePresets": [
+        {
+            "name": "win",
+            "displayName": "GCC",
+            "description": "GCC",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_C_COMPILER": "D:/msys64/ucrt64/bin/gcc.exe",
+                "CMAKE_CXX_COMPILER": "D:/msys64/ucrt64/bin/g++.exe",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_PROJECT_INCLUDE_BEFORE": "C:/Users/max/Documents/build-untitled-Desktop_Qt_6_5_1_MinGW_64_bit-Debug/.qtc/package-manager/auto-setup.cmake",
+                "CMAKE_PREFIX_PATH": "D:/Qt/6.5.1/mingw_64",
+                "QT_DIR": "D:/Qt/6.5.1/mingw_64/lib/cmake/Qt6",
+                "Qt6_DIR": "D:/Qt/6.5.1/mingw_64/lib/cmake/Qt6",
+                "Qt6CoreTools_DIR": "D:/Qt/6.5.1/mingw_64/lib/cmake/Qt6CoreTools",
+                "Qt6Core_DIR": "D:/Qt/6.5.1/mingw_64/lib/cmake/Qt6Core",
+                "Qt6EntryPointPrivate_DIR": "D:/Qt/6.5.1/mingw_64/lib/cmake/Qt6EntryPointPrivate",
+                "Qt6GuiTools_DIR": "D:/Qt/6.5.1/mingw_64/lib/cmake/Qt6GuiTools",
+                "Qt6Gui_DIR": "D:/Qt/6.5.1/mingw_64/lib/cmake/Qt6Gui",
+                "Qt6WidgetsTools_DIR": "D:/Qt/6.5.1/mingw_64/lib/cmake/Qt6WidgetsTools",
+                "Qt6Widgets_DIR": "D:/Qt/6.5.1/mingw_64/lib/cmake/Qt6Widgets",
+                "Qt6ZlibPrivate_DIR": "D:/Qt/6.5.1/mingw_64/lib/cmake/Qt6ZlibPrivate",
+                "WINDEPLOYQT_EXECUTABLE": "D:/Qt/6.5.1/mingw_64/bin/windeployqt.exe"
+            }
         }
-      }
-    }
-  ],
-  "buildPresets": [
-    {
-      "name": "release",
-      "displayName": "Release",
-      "configurePreset": "win_default",
-      "configuration": "Release"
-    },
-    {
-      "name": "debug",
-      "displayName": "Debug",
-      "configurePreset": "win_default",
-      "configuration": "Debug"
-    }
-  ]
+    ],
+    "buildPresets": [
+        {
+            "name": "win-debug",
+            "displayName": "GCC Debug build",
+            "configurePreset": "win",
+            "configuration": "Debug"
+        }
+    ]
 }
