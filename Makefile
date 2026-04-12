@@ -1,17 +1,18 @@
 .DEFAULT_GOAL := build
 
 # Usage:
-#   make                       -> configure + build with PRESET=debug
-#   make build PRESET=release  -> configure + build a specific preset
+#   make                       -> conan install + configure + build with PRESET=debug
+#   make build PRESET=release  -> conan install + configure + build a specific preset
 #   make debug                 -> shorthand for PRESET=debug
 #   make test PRESET=asan      -> run tests for a configured preset
 #   make lint                  -> run clang-tidy using the active preset database
 #   make format                -> format project sources in-place
 #   make coverage-report       -> generate HTML coverage report
-#   make coverage-report COVERAGE_BIN=build/coverage/template-project
+#   make conan-install         -> install Conan dependencies only
 
 CMAKE          ?= cmake
 CTEST          ?= ctest
+CONAN          ?= conan
 CLANG_TIDY     ?= clang-tidy
 CLANG_FORMAT   ?= clang-format
 LLVM_PROFDATA  ?= llvm-profdata
@@ -25,7 +26,14 @@ COMPILE_COMMANDS_LINK ?= compile_commands.json
 LLVM_PROFILE_FILE     ?= $(COVERAGE_BUILD_DIR)/default.profraw
 COVERAGE_OUTPUT_DIR   ?= build/coverage-report
 
-FORMAT_DIRS := src include tests
+# Map preset to Conan build_type
+ifeq ($(filter $(PRESET),release),$(PRESET))
+  CONAN_BUILD_TYPE := Release
+else
+  CONAN_BUILD_TYPE := Debug
+endif
+
+FORMAT_DIRS := src tests
 LINT_DIRS   := src tests
 
 FORMAT_FILES := $(shell find $(FORMAT_DIRS) -type f \( \
@@ -37,13 +45,19 @@ LINT_FILES := $(shell find $(LINT_DIRS) -type f \( \
 	-name '*.cc' -o -name '*.cpp' \
 \) 2>/dev/null)
 
-.PHONY: all build configure rebuild compile-commands \
+.PHONY: all build configure conan-install rebuild compile-commands \
         debug release asan tsan ubsan coverage \
         test lint format format-check clean coverage-report help
 
 all: build
 
-configure:
+conan-install:
+	$(CONAN) install . --output-folder=$(BUILD_DIR) \
+		-s build_type=$(CONAN_BUILD_TYPE) \
+		-s compiler.cppstd=23 \
+		--build=missing
+
+configure: conan-install
 	@if [ -f "$(BUILD_DIR)/CMakeCache.txt" ]; then \
 		cache_source="$$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$(BUILD_DIR)/CMakeCache.txt")"; \
 		if [ -n "$$cache_source" ] && [ "$$cache_source" != "$(CURDIR)" ]; then \
@@ -69,8 +83,8 @@ compile-commands: configure
 		exit 1; \
 	fi
 
-debug release asan tsan ubsan coverage: PRESET = $@
-debug release asan tsan ubsan coverage: build
+debug release asan tsan ubsan coverage:
+	$(MAKE) build PRESET=$@
 
 test: configure
 	@mkdir -p "$(BUILD_DIR)"
@@ -88,7 +102,7 @@ lint: $(BUILD_DIR)/compile_commands.json
 	fi
 	$(CLANG_TIDY) -p $(BUILD_DIR) $(LINT_FILES)
 
-$(BUILD_DIR)/compile_commands.json:
+$(BUILD_DIR)/compile_commands.json: conan-install
 	$(CMAKE) --preset $(PRESET)
 
 format:
@@ -145,8 +159,9 @@ clean:
 
 help:
 	@echo "Targets:"
-	@echo "  build             Configure + build (PRESET=<name>, default: debug)"
-	@echo "  configure         Configure only for PRESET=<name>"
+	@echo "  build             Conan install + configure + build (PRESET=<name>, default: debug)"
+	@echo "  configure         Conan install + configure only for PRESET=<name>"
+	@echo "  conan-install     Install Conan dependencies for PRESET=<name>"
 	@echo "  rebuild           Clean and build again"
 	@echo "  compile-commands  Refresh root compile_commands.json symlink"
 	@echo "  debug             Shorthand for 'make build PRESET=debug'"

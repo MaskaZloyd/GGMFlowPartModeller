@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(template-project
+project(GGMFlowPartModeller
     VERSION 0.1.0
     LANGUAGES CXX
 )
@@ -47,6 +47,12 @@ if(ENABLE_COVERAGE)
     add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
     add_link_options(-fprofile-instr-generate)
 endif()
+
+# External dependencies (provided by Conan)
+find_package(imgui REQUIRED)
+find_package(glfw3 REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(opengl_system REQUIRED)
 
 add_subdirectory(src)
 

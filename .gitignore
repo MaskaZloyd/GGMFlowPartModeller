@@ -1,6 +1,9 @@
 build/
 compile_commands.json
+CMakeUserPresets.json
 *.profraw
 *.profdata
 coverage-report/
 .cache/
+.claude/
+.vscode/
