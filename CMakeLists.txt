@@ -53,6 +53,9 @@ find_package(imgui REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(opengl_system REQUIRED)
+find_package(nlohmann_json REQUIRED)
+find_package(TBB REQUIRED)
+find_package(spdlog REQUIRED)
 
 add_subdirectory(src)
 
