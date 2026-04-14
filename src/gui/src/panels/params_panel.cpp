@@ -1,0 +1,150 @@
+#include "gui/panels/params_panel.hpp"
+
+#include <imgui.h>
+
+#include <algorithm>
+#include <cmath>
+
+namespace ggm::gui {
+
+namespace {
+
+struct PendingEdit {
+  core::PumpParams before;
+  bool active = false;
+};
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+PendingEdit pendingEdit;
+
+constexpr float INPUT_WIDTH = 120.0F;
+constexpr const char* DRAG_FORMAT = "%.3f";
+
+// Render one parameter row: fixed-width input on the left, full-length
+// label text on the right. Hiding ImGui's default label ("##<id>") frees
+// us from the column-hungry default layout.
+bool paramDrag(const char* id,
+               const char* labelText,
+               double* value,
+               const double* minVal,
+               const double* maxVal,
+               const char* tooltip = nullptr) {
+  ImGui::PushID(id);
+  ImGui::SetNextItemWidth(INPUT_WIDTH);
+
+  float speed = 0.1F;
+  bool changed = ImGui::DragScalar("##v", ImGuiDataType_Double, value, speed, minVal,
+                                    maxVal, DRAG_FORMAT);
+
+  if (minVal != nullptr && *value < *minVal) {
+    *value = *minVal;
+  }
+  if (maxVal != nullptr && *value > *maxVal) {
+    *value = *maxVal;
+  }
+
+  if (ImGui::IsItemActivated() && !pendingEdit.active) {
+    pendingEdit.active = true;
+  }
+
+  ImGui::SameLine();
+  ImGui::AlignTextToFramePadding();
+  ImGui::TextUnformatted(labelText);
+
+  if (tooltip != nullptr && ImGui::IsItemHovered()) {
+    ImGui::SetTooltip("%s", tooltip);
+  }
+
+  ImGui::PopID();
+  return changed;
+}
+
+} // namespace
+
+ParamsPanelResult drawParamsPanel(const core::PumpParams& current) noexcept {
+  ParamsPanelResult result;
+  result.liveParams = current;
+
+  ImGui::Begin("Параметры");
+
+  if (!pendingEdit.active) {
+    pendingEdit.before = current;
+  }
+
+  auto& params = result.liveParams;
+
+  static constexpr double MIN_POSITIVE = 0.001;
+  static constexpr double MIN_ZERO = 0.0;
+  static constexpr double MAX_ZERO = 0.0;
+  static constexpr double MIN_ANGLE_NEG = -89.0;
+  static constexpr double MAX_ANGLE_POS = 89.0;
+  static constexpr double MAX_AL02 = -0.001;
+
+  if (ImGui::CollapsingHeader("Общие размеры", ImGuiTreeNodeFlags_DefaultOpen)) {
+    paramDrag("xa", "xa — осевой отступ, мм", &params.xa, nullptr, nullptr,
+              "Осевой отступ входного участка");
+    paramDrag("dvt", "dvt — диаметр втулки, мм", &params.dvt, &MIN_POSITIVE, nullptr,
+              "Диаметр втулки (вала)");
+    paramDrag("d2", "d2 — диаметр выхода, мм", &params.d2, &MIN_POSITIVE, nullptr,
+              "Диаметр выхода рабочего колеса");
+    paramDrag("b2", "b2 — ширина выхода, мм", &params.b2, &MIN_POSITIVE, nullptr,
+              "Осевая ширина канала на выходе");
+    paramDrag("din", "din — диаметр входа, мм", &params.din, &MIN_POSITIVE, nullptr,
+              "Диаметр входного патрубка");
+  }
+
+  if (ImGui::CollapsingHeader("Дуги втулки", ImGuiTreeNodeFlags_DefaultOpen)) {
+    paramDrag("r1", "r1 — радиус дуги 1, мм", &params.r1, &MIN_POSITIVE, nullptr,
+              "Радиус первой дуги втулки");
+    paramDrag("r2", "r2 — радиус дуги 2, мм", &params.r2, &MIN_POSITIVE, nullptr,
+              "Радиус второй дуги втулки");
+    paramDrag("al1", "al1 — наклон выхода, °", &params.al1Deg, &MIN_ZERO, &MAX_ANGLE_POS,
+              "Угол наклона выходного участка втулки (≥ 0)");
+    paramDrag("be1", "be1 — охват дуги 1, °", &params.be1Deg, &MIN_POSITIVE, &MAX_ANGLE_POS,
+              "Угловой охват первой дуги втулки");
+
+    double be2Deg = 90.0 - params.be1Deg + params.al1Deg;
+    ImGui::TextDisabled("be2 = %.2f° (вычисленный)", be2Deg);
+    if (ImGui::IsItemHovered()) {
+      ImGui::SetTooltip("be2 = 90 − be1 + al1. Охват второй дуги для G1-непрерывности");
+    }
+  }
+
+  if (ImGui::CollapsingHeader("Дуги покрывного диска", ImGuiTreeNodeFlags_DefaultOpen)) {
+    paramDrag("r3", "r3 — радиус дуги 3, мм", &params.r3, &MIN_POSITIVE, nullptr,
+              "Радиус первой дуги покрывного диска");
+    paramDrag("r4", "r4 — радиус дуги 4, мм", &params.r4, &MIN_POSITIVE, nullptr,
+              "Радиус второй дуги покрывного диска");
+    paramDrag("al2", "al2 — наклон выхода, °", &params.al2Deg, &MIN_ANGLE_NEG, &MAX_ZERO,
+              "Угол наклона выходного участка покр. диска (≤ 0)");
+    paramDrag("al02", "al02 — наклон горла, °", &params.al02Deg, &MIN_ANGLE_NEG, &MAX_AL02,
+              "Угол наклона входного участка покр. диска (< 0)");
+    paramDrag("be3", "be3 — охват дуги 3, °", &params.be3RawDeg, &MIN_POSITIVE,
+              &MAX_ANGLE_POS, "Угловой охват первой дуги покр. диска (до корр.)");
+
+    double be3Eff = params.be3RawDeg - std::abs(params.al02Deg);
+    double be4Deg = 90.0 - be3Eff + params.al2Deg;
+    ImGui::TextDisabled("be3_eff = %.2f°, be4 = %.2f° (вычисленный)", be3Eff, be4Deg);
+    if (ImGui::IsItemHovered()) {
+      ImGui::SetTooltip("be3_eff = be3 − |al02|. be4 = 90 − be3_eff + al2");
+    }
+  }
+
+  bool editFinished = pendingEdit.active && !ImGui::IsAnyItemActive();
+  if (editFinished && !(params == current)) {
+    result.finishedEdit = EditCommand{
+        .before = pendingEdit.before,
+        .after = params,
+        .label = "Изменение параметра",
+    };
+    pendingEdit.active = false;
+  } else if (editFinished) {
+    pendingEdit.active = false;
+  }
+
+  ImGui::End();
+
+  return result;
+}
+
+} // namespace ggm::gui
