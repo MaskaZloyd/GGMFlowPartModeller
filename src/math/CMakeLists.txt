@@ -1,5 +1,7 @@
 add_library(math STATIC
-    src/placeholder.cpp
+    src/bezier.cpp
+    src/nurbs.cpp
+    src/arc_length.cpp
 )
 
 target_include_directories(math PUBLIC
