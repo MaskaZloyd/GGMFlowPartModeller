@@ -55,7 +55,9 @@ conan-install:
 	$(CONAN) install . --output-folder=$(BUILD_DIR) \
 		-s build_type=$(CONAN_BUILD_TYPE) \
 		-s compiler.cppstd=23 \
+		-c tools.cmake.cmaketoolchain:user_presets="" \
 		--build=missing
+	@rm -f CMakeUserPresets.json
 
 configure: conan-install
 	@if [ -f "$(BUILD_DIR)/CMakeCache.txt" ]; then \
