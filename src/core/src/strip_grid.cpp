@@ -1,5 +1,6 @@
 #include "core/strip_grid.hpp"
 
+#include <array>
 #include <vector>
 
 namespace ggm::core {
@@ -16,21 +17,29 @@ void smoothInterior(std::vector<math::Vec2>& nodes, int nh, int mm,
   if (nh < 3 || mm < 3 || iterations <= 0) {
     return;
   }
-  std::vector<math::Vec2> prev(nodes.size());
+  std::array<std::vector<math::Vec2>, 2> bufs{nodes, nodes};
+  int src = 0;
+  const auto mmU = static_cast<std::size_t>(mm);
   for (int iter = 0; iter < iterations; ++iter) {
-    prev = nodes;
+    const int dst = 1 - src;
+    const auto& readBuf = bufs[static_cast<std::size_t>(src)];
+    auto& writeBuf = bufs[static_cast<std::size_t>(dst)];
     for (int i = 1; i < nh - 1; ++i) {
+      const auto rowIdx = static_cast<std::size_t>(i);
       for (int j = 1; j < mm - 1; ++j) {
-        auto idx = static_cast<std::size_t>(i * mm + j);
-        auto n = prev[static_cast<std::size_t>((i - 1) * mm + j)];
-        auto s = prev[static_cast<std::size_t>((i + 1) * mm + j)];
-        auto w = prev[static_cast<std::size_t>(i * mm + (j - 1))];
-        auto e = prev[static_cast<std::size_t>(i * mm + (j + 1))];
-        math::Vec2 avg = 0.25 * (n + s + w + e);
-        nodes[idx] = (1.0 - relax) * prev[idx] + relax * avg;
+        const auto colIdx = static_cast<std::size_t>(j);
+        const auto idx = (rowIdx * mmU) + colIdx;
+        const auto& north = readBuf[((rowIdx - 1) * mmU) + colIdx];
+        const auto& south = readBuf[((rowIdx + 1) * mmU) + colIdx];
+        const auto& west = readBuf[(rowIdx * mmU) + (colIdx - 1)];
+        const auto& east = readBuf[(rowIdx * mmU) + (colIdx + 1)];
+        const math::Vec2 avg = 0.25 * (north + south + west + east);
+        writeBuf[idx] = ((1.0 - relax) * readBuf[idx]) + (relax * avg);
       }
     }
+    src = dst;
   }
+  nodes = std::move(bufs[static_cast<std::size_t>(src)]);
 }
 
 } // namespace
