@@ -9,7 +9,8 @@ namespace ggm::gui {
 // Visible world bounds after the aspect correction. Panels use this to draw
 // overlays (legend, scale bar) whose position depends on the pixel-to-world
 // mapping.
-struct ViewportMap {
+struct ViewportMap
+{
   double minZ = 0.0;
   double maxZ = 0.0;
   double minR = 0.0;
@@ -20,7 +21,8 @@ struct ViewportMap {
 
 // Renders hub/shroud polylines, grid, streamlines, and mean line
 // into the currently bound FBO using OpenGL.
-class GeometryRenderer {
+class GeometryRenderer
+{
 public:
   GeometryRenderer() = default;
   ~GeometryRenderer();
@@ -36,13 +38,15 @@ public:
                      int viewportHeight) noexcept;
 
 private:
+  [[nodiscard]] bool isReady() const noexcept;
   void initGl() noexcept;
   void destroy() noexcept;
 
   unsigned int vao_ = 0;
   unsigned int vbo_ = 0;
   unsigned int shaderProgram_ = 0;
-  bool initialized_ = false;
+  int viewportUniformLocation_ = -1;
+  int colorUniformLocation_ = -1;
   float maxLineWidth_ = 1.0F;
 };
 
