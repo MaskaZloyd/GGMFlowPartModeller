@@ -50,6 +50,8 @@ CheckOptions:
     value: camelBack
   - key:   readability-identifier-naming.ConstantCase
     value: UPPER_CASE
+  - key:   readability-identifier-naming.LocalConstantCase
+    value: camelBack
   - key:   readability-identifier-naming.PrivateMemberSuffix
     value: "_"
   - key:   modernize-use-default-member-init.UseAssignment
