@@ -6,14 +6,23 @@
 
 namespace ggm::gui {
 
-struct ParamsPanelResult {
+struct ParamsPanelState
+{
+  core::PumpParams beforeEdit;
+  bool active = false;
+};
+
+struct ParamsPanelResult
+{
   // Live-edited params for preview (always set when panel is visible).
   core::PumpParams liveParams;
   // If set, drag just ended — push to undo stack.
   std::optional<EditCommand> finishedEdit;
 };
 
-// Draw parameter input panel.
-[[nodiscard]] ParamsPanelResult drawParamsPanel(const core::PumpParams& current) noexcept;
+// Draw parameter input panel. The state is caller-owned and preserved
+// across frames to track drag lifetime (start/finish).
+[[nodiscard]] ParamsPanelResult drawParamsPanel(const core::PumpParams& current,
+                                                ParamsPanelState& state) noexcept;
 
 } // namespace ggm::gui

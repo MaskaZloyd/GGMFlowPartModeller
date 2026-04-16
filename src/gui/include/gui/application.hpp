@@ -4,6 +4,7 @@
 #include "core/pump_model.hpp"
 #include "gui/commands/edit_command.hpp"
 #include "gui/commands/undo_stack.hpp"
+#include "gui/panels/params_panel.hpp"
 #include "gui/renderer/fbo.hpp"
 #include "gui/renderer/geometry_renderer.hpp"
 #include "gui/renderer/render_settings.hpp"
@@ -47,6 +48,7 @@ private:
   std::filesystem::path currentPath_;
   RenderSettings renderSettings_;
   std::unique_ptr<core::AsyncFlowSolver> asyncSolver_;
+  ParamsPanelState paramsPanelState_;
 };
 
 } // namespace ggm::gui

@@ -81,7 +81,7 @@ int Application::run() noexcept {
     }
 
     // Parameters panel: fast geometry-only update during drag.
-    auto panelResult = drawParamsPanel(model_.params());
+    auto panelResult = drawParamsPanel(model_.params(), paramsPanelState_);
 
     bool liveChanged = !(panelResult.liveParams == model_.params());
     if (liveChanged) {
