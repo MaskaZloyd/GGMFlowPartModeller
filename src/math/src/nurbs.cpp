@@ -7,7 +7,9 @@
 
 namespace ggm::math {
 
-NurbsCurve buildFromSegments(std::span<const ArcBezier> segments) noexcept {
+NurbsCurve
+buildFromSegments(std::span<const ArcBezier> segments) noexcept
+{
   NurbsCurve curve;
   curve.degree = 2;
 
@@ -41,8 +43,12 @@ namespace {
 
 // Binary-search for the knot span such that knots[k] <= param < knots[k+1].
 // numCps = controlPoints.size() - 1, deg = curve degree. Span index in [deg, numCps].
-[[nodiscard]] std::size_t findSpan(std::size_t numCps, std::size_t deg, double param,
-                                   const std::vector<double>& knots) noexcept {
+[[nodiscard]] std::size_t
+findSpan(std::size_t numCps,
+         std::size_t deg,
+         double param,
+         const std::vector<double>& knots) noexcept
+{
   if (param >= knots[numCps + 1]) {
     return numCps;
   }
@@ -67,9 +73,13 @@ namespace {
 // using the triangular recurrence from The NURBS Book section 2.5
 // (Piegl and Tiller, algorithm A2.2).
 // Only for deg = 2 in this codebase — the fixed-size arrays reflect that.
-void basisFunctions(std::size_t span, double param, std::size_t deg,
-                    const std::vector<double>& knots,
-                    std::array<double, 3>& out) noexcept {
+void
+basisFunctions(std::size_t span,
+               double param,
+               std::size_t deg,
+               const std::vector<double>& knots,
+               std::array<double, 3>& out) noexcept
+{
   std::array<double, 3> leftDelta{};
   std::array<double, 3> rightDelta{};
   out[0] = 1.0;
@@ -89,7 +99,9 @@ void basisFunctions(std::size_t span, double param, std::size_t deg,
 
 } // namespace
 
-std::vector<Vec2> evaluate(const NurbsCurve& curve, int numPoints) noexcept {
+std::vector<Vec2>
+evaluate(const NurbsCurve& curve, int numPoints) noexcept
+{
   std::vector<Vec2> result;
   if (numPoints <= 0 || curve.controlPoints.empty()) {
     return result;
@@ -105,8 +117,7 @@ std::vector<Vec2> evaluate(const NurbsCurve& curve, int numPoints) noexcept {
       result.push_back(curve.controlPoints.back());
       continue;
     }
-    const double param =
-      static_cast<double>(ptIdx) / static_cast<double>(numPoints - 1);
+    const double param = static_cast<double>(ptIdx) / static_cast<double>(numPoints - 1);
 
     const std::size_t span = findSpan(numCps, deg, param, curve.knots);
     std::array<double, 3> basis{};

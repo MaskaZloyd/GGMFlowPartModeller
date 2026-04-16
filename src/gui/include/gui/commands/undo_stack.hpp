@@ -7,7 +7,8 @@
 
 namespace ggm::gui {
 
-class UndoStack {
+class UndoStack
+{
 public:
   static constexpr int MAX_DEPTH = 100;
 

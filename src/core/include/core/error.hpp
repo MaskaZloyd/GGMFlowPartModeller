@@ -5,7 +5,8 @@
 
 namespace ggm::core {
 
-enum class CoreError {
+enum class CoreError
+{
   InvalidParameter,
   GeometryBuildFailed,
   SerializationFailed,
@@ -19,7 +20,9 @@ enum class CoreError {
 };
 
 // Human-readable error description.
-[[nodiscard]] constexpr const char* toString(CoreError err) noexcept {
+[[nodiscard]] constexpr const char*
+toString(CoreError err) noexcept
+{
   switch (err) {
     case CoreError::InvalidParameter:
       return "Invalid parameter value";

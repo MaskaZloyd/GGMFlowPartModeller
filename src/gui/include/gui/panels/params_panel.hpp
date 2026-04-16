@@ -22,7 +22,7 @@ struct ParamsPanelResult
 
 // Draw parameter input panel. The state is caller-owned and preserved
 // across frames to track drag lifetime (start/finish).
-[[nodiscard]] ParamsPanelResult drawParamsPanel(const core::PumpParams& current,
-                                                ParamsPanelState& state) noexcept;
+[[nodiscard]] ParamsPanelResult
+drawParamsPanel(const core::PumpParams& current, ParamsPanelState& state) noexcept;
 
 } // namespace ggm::gui

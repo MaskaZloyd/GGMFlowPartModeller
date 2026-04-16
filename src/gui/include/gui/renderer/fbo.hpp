@@ -7,7 +7,8 @@
 namespace ggm::gui {
 
 // RAII wrapper for an OpenGL framebuffer object with color texture + depth renderbuffer.
-class Fbo {
+class Fbo
+{
 public:
   Fbo() = default;
   ~Fbo();

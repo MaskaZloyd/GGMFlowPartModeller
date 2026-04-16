@@ -1,6 +1,7 @@
 #include "core/serialization.hpp"
 
 #include <fstream>
+
 #include <nlohmann/json.hpp>
 
 namespace ggm::core {
@@ -9,27 +10,31 @@ namespace {
 
 constexpr int FILE_VERSION = 1;
 
-void toJson(nlohmann::json& json, const PumpParams& params) {
+void
+toJson(nlohmann::json& json, const PumpParams& params)
+{
   json = nlohmann::json{
-      {"version", FILE_VERSION},
-      {"xa", params.xa},
-      {"dvt", params.dvt},
-      {"d2", params.d2},
-      {"r1", params.r1},
-      {"r2", params.r2},
-      {"r3", params.r3},
-      {"r4", params.r4},
-      {"al1Deg", params.al1Deg},
-      {"al2Deg", params.al2Deg},
-      {"al02Deg", params.al02Deg},
-      {"be1Deg", params.be1Deg},
-      {"be3RawDeg", params.be3RawDeg},
-      {"b2", params.b2},
-      {"din", params.din},
+    {"version", FILE_VERSION},
+    {"xa", params.xa},
+    {"dvt", params.dvt},
+    {"d2", params.d2},
+    {"r1", params.r1},
+    {"r2", params.r2},
+    {"r3", params.r3},
+    {"r4", params.r4},
+    {"al1Deg", params.al1Deg},
+    {"al2Deg", params.al2Deg},
+    {"al02Deg", params.al02Deg},
+    {"be1Deg", params.be1Deg},
+    {"be3RawDeg", params.be3RawDeg},
+    {"b2", params.b2},
+    {"din", params.din},
   };
 }
 
-PumpParams fromJson(const nlohmann::json& json) {
+PumpParams
+fromJson(const nlohmann::json& json)
+{
   PumpParams params;
   params.xa = json.value("xa", params.xa);
   params.dvt = json.value("dvt", params.dvt);
@@ -50,8 +55,9 @@ PumpParams fromJson(const nlohmann::json& json) {
 
 } // namespace
 
-Result<void> saveParams(const PumpParams& params,
-                        const std::filesystem::path& path) noexcept {
+Result<void>
+saveParams(const PumpParams& params, const std::filesystem::path& path) noexcept
+{
   try {
     nlohmann::json json;
     toJson(json, params);
@@ -70,7 +76,9 @@ Result<void> saveParams(const PumpParams& params,
   }
 }
 
-Result<PumpParams> loadParams(const std::filesystem::path& path) noexcept {
+Result<PumpParams>
+loadParams(const std::filesystem::path& path) noexcept
+{
   try {
     if (!std::filesystem::exists(path)) {
       return std::unexpected(CoreError::FileNotFound);

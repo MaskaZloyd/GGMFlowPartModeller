@@ -14,10 +14,10 @@ namespace ggm::core {
 //   equidistant from both walls.
 // - Area: F = 2*pi*r*chord where chord is measured along the gradient of psi.
 // Parallelized with TBB over rows.
-[[nodiscard]] Result<AreaProfile> computeAreaProfile(
-    const FlowSolution& sol,
-    std::span<const math::Vec2> hubPolyline,
-    std::span<const math::Vec2> shroudPolyline,
-    const PumpParams& params) noexcept;
+[[nodiscard]] Result<AreaProfile>
+computeAreaProfile(const FlowSolution& sol,
+                   std::span<const math::Vec2> hubPolyline,
+                   std::span<const math::Vec2> shroudPolyline,
+                   const PumpParams& params) noexcept;
 
 } // namespace ggm::core

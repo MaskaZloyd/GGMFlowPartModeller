@@ -7,7 +7,9 @@ namespace ggm::gui {
 
 namespace {
 
-constexpr ImVec4 rgba(float r, float g, float b, float a = 1.0F) {
+constexpr ImVec4
+rgba(float r, float g, float b, float a = 1.0F)
+{
   return {r, g, b, a};
 }
 
@@ -25,7 +27,9 @@ constexpr ImVec4 TEXT_MUTED = rgba(0.480F, 0.490F, 0.520F);
 
 } // namespace
 
-void applyLightTheme() {
+void
+applyLightTheme()
+{
   ImGui::StyleColorsLight();
   auto& style = ImGui::GetStyle();
 

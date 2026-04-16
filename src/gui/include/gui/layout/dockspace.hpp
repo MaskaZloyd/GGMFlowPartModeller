@@ -8,7 +8,8 @@
 
 namespace ggm::gui {
 
-struct DockspaceActions {
+struct DockspaceActions
+{
   bool requestNew = false;
   bool requestOpen = false;
   bool requestSave = false;
@@ -20,13 +21,15 @@ struct DockspaceActions {
 
 // Build fullscreen dockspace with main menu bar.
 // Returns actions requested by the user via the menu.
-[[nodiscard]] DockspaceActions buildDockspace(bool canUndo, bool canRedo) noexcept;
+[[nodiscard]] DockspaceActions
+buildDockspace(bool canUndo, bool canRedo) noexcept;
 
 // Status bar pinned to the bottom of the screen. Shows the current file
 // name (or "без имени"), solver status with color, last computation time,
 // and FPS.
-void drawStatusBar(std::string_view fileName,
-                   core::SolverStatus solverStatus,
-                   std::chrono::milliseconds lastDuration) noexcept;
+void
+drawStatusBar(std::string_view fileName,
+              core::SolverStatus solverStatus,
+              std::chrono::milliseconds lastDuration) noexcept;
 
 } // namespace ggm::gui

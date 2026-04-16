@@ -2,7 +2,8 @@
 
 namespace ggm::core {
 
-struct ComputationSettings {
+struct ComputationSettings
+{
   int nurbsEvalPoints = 400; // points for NURBS curve display
   int nh = 200;              // arc-length stations along curves (stream-wise)
   int m = 80;                // transverse grid stations across gap

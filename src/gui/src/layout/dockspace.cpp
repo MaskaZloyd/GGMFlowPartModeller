@@ -2,13 +2,15 @@
 
 #include "gui/solver_status_display.hpp"
 
-#include <imgui.h>
-
 #include <cstdio>
+
+#include <imgui.h>
 
 namespace ggm::gui {
 
-DockspaceActions buildDockspace(bool canUndo, bool canRedo) noexcept {
+DockspaceActions
+buildDockspace(bool canUndo, bool canRedo) noexcept
+{
   DockspaceActions actions;
 
   // Fullscreen dockspace window
@@ -99,9 +101,11 @@ DockspaceActions buildDockspace(bool canUndo, bool canRedo) noexcept {
   return actions;
 }
 
-void drawStatusBar(std::string_view fileName,
-                   core::SolverStatus solverStatus,
-                   std::chrono::milliseconds lastDuration) noexcept {
+void
+drawStatusBar(std::string_view fileName,
+              core::SolverStatus solverStatus,
+              std::chrono::milliseconds lastDuration) noexcept
+{
   const ImGuiViewport* viewport = ImGui::GetMainViewport();
   const float height = ImGui::GetFrameHeight() + 6.0F;
   ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + viewport->Size.y - height));

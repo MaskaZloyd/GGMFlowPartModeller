@@ -4,14 +4,18 @@
 
 namespace ggm::core {
 
-PumpParams PumpModel::setParams(PumpParams newParams) noexcept {
+PumpParams
+PumpModel::setParams(PumpParams newParams) noexcept
+{
   PumpParams old = params_;
   params_ = newParams;
   geometryValid_ = false;
   return old;
 }
 
-Result<void> PumpModel::rebuildGeometry() noexcept {
+Result<void>
+PumpModel::rebuildGeometry() noexcept
+{
   auto result = buildGeometry(params_);
   if (!result) {
     geometry_ = {};

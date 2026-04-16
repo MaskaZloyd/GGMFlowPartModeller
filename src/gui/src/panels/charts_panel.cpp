@@ -2,12 +2,12 @@
 
 #include "core/flow_solver_types.hpp"
 
-#include <imgui.h>
-#include <implot.h>
-
 #include <algorithm>
 #include <limits>
 #include <vector>
+
+#include <imgui.h>
+#include <implot.h>
 
 namespace ggm::gui {
 
@@ -17,7 +17,9 @@ namespace {
 // geometric midpoint. Produces the ψ value along the mean streamline —
 // useful to verify that the FEM solution actually reaches 0.5 somewhere
 // in the middle of the channel.
-std::vector<double> psiAlongMidline(const core::FlowResults& flow) {
+std::vector<double>
+psiAlongMidline(const core::FlowResults& flow)
+{
   const auto& sol = flow.solution;
   const auto& mid = flow.areaProfile.midPoints;
   std::vector<double> out;
@@ -31,8 +33,7 @@ std::vector<double> psiAlongMidline(const core::FlowResults& flow) {
     double bestDist = std::numeric_limits<double>::max();
     int bestCol = 0;
     for (int j = 0; j < mm; ++j) {
-      double d = (sol.grid.nodes[static_cast<std::size_t>(row * mm + j)] - mid[i])
-                     .squaredNorm();
+      double d = (sol.grid.nodes[static_cast<std::size_t>(row * mm + j)] - mid[i]).squaredNorm();
       if (d < bestDist) {
         bestDist = d;
         bestCol = j;
@@ -45,7 +46,9 @@ std::vector<double> psiAlongMidline(const core::FlowResults& flow) {
 
 } // namespace
 
-void drawChartsPanel(const core::FlowResults* flow, bool flowValid) noexcept {
+void
+drawChartsPanel(const core::FlowResults* flow, bool flowValid) noexcept
+{
   ImGui::Begin("Графики");
 
   if (!flowValid || flow == nullptr) {
@@ -66,10 +69,9 @@ void drawChartsPanel(const core::FlowResults* flow, bool flowValid) noexcept {
   float halfH = std::max(120.0F, (avail.y - 16.0F) * 0.5F);
 
   // ---- Area profile F(s) ----
-  if (ImPlot::BeginPlot("Профиль площади F(s)", ImVec2(-1, halfH),
-                        ImPlotFlags_Crosshairs)) {
-    ImPlot::SetupAxes("Длина дуги s, мм", "Площадь F, мм²",
-                      ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+  if (ImPlot::BeginPlot("Профиль площади F(s)", ImVec2(-1, halfH), ImPlotFlags_Crosshairs)) {
+    ImPlot::SetupAxes(
+      "Длина дуги s, мм", "Площадь F, мм²", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
     ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
     ImPlot::SetupMouseText(ImPlotLocation_SouthEast);
 
@@ -94,11 +96,9 @@ void drawChartsPanel(const core::FlowResults* flow, bool flowValid) noexcept {
     double fStart[] = {area.flowAreas.front()};
     double sEnd[] = {area.arcLengths.back()};
     double fEnd[] = {area.flowAreas.back()};
-    ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 5.0F,
-                               ImVec4(0.12F, 0.70F, 0.30F, 1.0F));
+    ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 5.0F, ImVec4(0.12F, 0.70F, 0.30F, 1.0F));
     ImPlot::PlotScatter("вход", sStart, fStart, 1);
-    ImPlot::SetNextMarkerStyle(ImPlotMarker_Diamond, 5.0F,
-                               ImVec4(0.85F, 0.22F, 0.18F, 1.0F));
+    ImPlot::SetNextMarkerStyle(ImPlotMarker_Diamond, 5.0F, ImVec4(0.85F, 0.22F, 0.18F, 1.0F));
     ImPlot::PlotScatter("выход", sEnd, fEnd, 1);
 
     ImPlot::EndPlot();
@@ -107,10 +107,8 @@ void drawChartsPanel(const core::FlowResults* flow, bool flowValid) noexcept {
   ImGui::Spacing();
 
   // ---- ψ along midline ----
-  if (ImPlot::BeginPlot("ψ на средней линии", ImVec2(-1, halfH),
-                        ImPlotFlags_Crosshairs)) {
-    ImPlot::SetupAxes("Длина дуги s, мм", "ψ",
-                      ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
+  if (ImPlot::BeginPlot("ψ на средней линии", ImVec2(-1, halfH), ImPlotFlags_Crosshairs)) {
+    ImPlot::SetupAxes("Длина дуги s, мм", "ψ", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
     ImPlot::SetupAxisLimits(ImAxis_Y1, -0.05, 1.05, ImPlotCond_Always);
     ImPlot::SetupLegend(ImPlotLocation_SouthEast, ImPlotLegendFlags_Outside);
     ImPlot::SetupMouseText(ImPlotLocation_NorthEast);

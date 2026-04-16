@@ -6,13 +6,16 @@ namespace ggm::core {
 
 AsyncFlowSolver::AsyncFlowSolver() = default;
 
-AsyncFlowSolver::~AsyncFlowSolver() noexcept {
+AsyncFlowSolver::~AsyncFlowSolver() noexcept
+{
   cancelAndWait();
 }
 
-void AsyncFlowSolver::submit(MeridionalGeometry geom,
-                             PumpParams params,
-                             ComputationSettings settings) noexcept {
+void
+AsyncFlowSolver::submit(MeridionalGeometry geom,
+                        PumpParams params,
+                        ComputationSettings settings) noexcept
+{
   // Increment generation to signal cancellation for any in-flight job.
   std::uint64_t newGen = currentGen_.fetch_add(1, std::memory_order_release) + 1;
 
@@ -34,10 +37,12 @@ void AsyncFlowSolver::submit(MeridionalGeometry geom,
   });
 }
 
-void AsyncFlowSolver::workerRun(std::uint64_t jobGen,
-                                const MeridionalGeometry& geom,
-                                const PumpParams& params,
-                                const ComputationSettings& settings) noexcept {
+void
+AsyncFlowSolver::workerRun(std::uint64_t jobGen,
+                           const MeridionalGeometry& geom,
+                           const PumpParams& params,
+                           const ComputationSettings& settings) noexcept
+{
   logging::solver()->debug("worker start gen={}", jobGen);
   auto start = std::chrono::steady_clock::now();
 
@@ -60,8 +65,8 @@ void AsyncFlowSolver::workerRun(std::uint64_t jobGen,
     return;
   }
 
-  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-      std::chrono::steady_clock::now() - start);
+  auto elapsed =
+    std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
   {
     std::lock_guard<std::mutex> lock(stateMutex_);
     lastDurationMs_ = elapsed.count();
@@ -82,24 +87,29 @@ void AsyncFlowSolver::workerRun(std::uint64_t jobGen,
     auto err = result.error();
     if (!isCancelled()) {
       std::lock_guard<std::mutex> lock(stateMutex_);
-      status_ = (err == CoreError::Cancelled) ? SolverStatus::Cancelled
-                                              : SolverStatus::Failed;
+      status_ = (err == CoreError::Cancelled) ? SolverStatus::Cancelled : SolverStatus::Failed;
     }
     logging::solver()->error("gen={} ошибка: {}", jobGen, toString(err));
   }
 }
 
-SolverStatus AsyncFlowSolver::status() const noexcept {
+SolverStatus
+AsyncFlowSolver::status() const noexcept
+{
   std::lock_guard<std::mutex> lock(stateMutex_);
   return status_;
 }
 
-std::chrono::milliseconds AsyncFlowSolver::lastDuration() const noexcept {
+std::chrono::milliseconds
+AsyncFlowSolver::lastDuration() const noexcept
+{
   std::lock_guard<std::mutex> lock(stateMutex_);
   return std::chrono::milliseconds(lastDurationMs_);
 }
 
-bool AsyncFlowSolver::poll() noexcept {
+bool
+AsyncFlowSolver::poll() noexcept
+{
   std::shared_ptr<FlowResults> fresh;
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -116,12 +126,16 @@ bool AsyncFlowSolver::poll() noexcept {
   return false;
 }
 
-std::shared_ptr<const FlowResults> AsyncFlowSolver::snapshot() const noexcept {
+std::shared_ptr<const FlowResults>
+AsyncFlowSolver::snapshot() const noexcept
+{
   std::lock_guard<std::mutex> lock(resultMutex_);
   return result_;
 }
 
-void AsyncFlowSolver::cancelAndWait() noexcept {
+void
+AsyncFlowSolver::cancelAndWait() noexcept
+{
   // Increment gen → in-flight workers will see mismatch at next check.
   currentGen_.fetch_add(1, std::memory_order_release);
   // Wait for any enqueued work in the arena to finish.

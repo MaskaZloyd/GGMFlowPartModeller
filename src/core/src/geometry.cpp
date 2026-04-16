@@ -3,11 +3,11 @@
 #include "math/bezier.hpp"
 #include "math/nurbs.hpp"
 
-#include <Eigen/LU>
-
 #include <array>
 #include <cmath>
 #include <numbers>
+
+#include <Eigen/LU>
 
 namespace ggm::core {
 
@@ -15,13 +15,17 @@ namespace {
 
 constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
 
-double vecAngle(const math::Vec2& vec) noexcept {
+double
+vecAngle(const math::Vec2& vec) noexcept
+{
   return std::atan2(vec.y(), vec.x());
 }
 
 } // namespace
 
-Result<MeridionalGeometry> buildGeometry(const PumpParams& params) noexcept {
+Result<MeridionalGeometry>
+buildGeometry(const PumpParams& params) noexcept
+{
   // Convert angles from degrees to radians
   double al1 = params.al1Deg * DEG_TO_RAD;
   double al2 = params.al2Deg * DEG_TO_RAD;
@@ -68,8 +72,7 @@ Result<MeridionalGeometry> buildGeometry(const PumpParams& params) noexcept {
   math::Vec2 exitDir5{std::cos(alpha2Star), std::sin(alpha2Star)};
 
   // Intersection point IS on shroud inlet line
-  math::Vec2 intersectionPt =
-      shrP5 + ((params.din / 2.0 - shrP5.y()) / exitDir5.y()) * exitDir5;
+  math::Vec2 intersectionPt = shrP5 + ((params.din / 2.0 - shrP5.y()) / exitDir5.y()) * exitDir5;
 
   // Solve 2x2 system for arc centers
   math::Vec2 vec1{1.0, 0.0};
@@ -128,10 +131,10 @@ Result<MeridionalGeometry> buildGeometry(const PumpParams& params) noexcept {
   auto shroudCurve = math::evaluate(shroudNurbs, 1500);
 
   return MeridionalGeometry{
-      .hubCurve = std::move(hubCurve),
-      .shroudCurve = std::move(shroudCurve),
-      .hubNurbs = std::move(hubNurbs),
-      .shroudNurbs = std::move(shroudNurbs),
+    .hubCurve = std::move(hubCurve),
+    .shroudCurve = std::move(shroudCurve),
+    .hubNurbs = std::move(hubNurbs),
+    .shroudNurbs = std::move(shroudNurbs),
   };
 }
 

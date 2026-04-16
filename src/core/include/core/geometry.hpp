@@ -9,7 +9,8 @@
 
 namespace ggm::core {
 
-struct MeridionalGeometry {
+struct MeridionalGeometry
+{
   std::vector<math::Vec2> hubCurve;
   std::vector<math::Vec2> shroudCurve;
   math::NurbsCurve hubNurbs;
@@ -18,6 +19,7 @@ struct MeridionalGeometry {
 
 // Build meridional geometry from pump parameters.
 // Returns evaluated hub and shroud curves + their NURBS representations.
-[[nodiscard]] Result<MeridionalGeometry> buildGeometry(const PumpParams& params) noexcept;
+[[nodiscard]] Result<MeridionalGeometry>
+buildGeometry(const PumpParams& params) noexcept;
 
 } // namespace ggm::core

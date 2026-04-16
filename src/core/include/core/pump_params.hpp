@@ -5,19 +5,20 @@ namespace ggm::core {
 // Meridional geometry parameters for centrifugal pump impeller.
 // All lengths in mm, angles in degrees (converted internally to radians).
 // Parameter names follow the reference Python implementation (hub_shr_build.py).
-struct PumpParams {
+struct PumpParams
+{
   // Hub/shroud shared geometry
-  double xa = 20.0;    // axial inlet offset
-  double dvt = 152.0;  // hub (shaft) bore diameter
-  double d2 = 407.0;   // impeller outlet diameter
+  double xa = 20.0;   // axial inlet offset
+  double dvt = 152.0; // hub (shaft) bore diameter
+  double d2 = 407.0;  // impeller outlet diameter
 
   // Hub arc radii
-  double r1 = 50.0;  // first hub arc radius
-  double r2 = 62.0;  // second hub arc radius
+  double r1 = 50.0; // first hub arc radius
+  double r2 = 62.0; // second hub arc radius
 
   // Shroud arc radii
-  double r3 = 22.0;  // first shroud arc radius
-  double r4 = 31.0;  // second shroud arc radius
+  double r3 = 22.0; // first shroud arc radius
+  double r4 = 31.0; // second shroud arc radius
 
   // Hub tilt angle at exit (degrees)
   double al1Deg = 2.0;

@@ -19,7 +19,9 @@ namespace {
 // so the FEM domain extends a few millimeters past the outlet radius. This
 // lets the stream function boundary "breathe" and removes the outlet-edge
 // artifact that would otherwise compress streamlines toward the shroud.
-void extendPolylineAtEnd(std::vector<math::Vec2>& poly, double extraDist) {
+void
+extendPolylineAtEnd(std::vector<math::Vec2>& poly, double extraDist)
+{
   if (poly.size() < 2 || extraDist <= 0.0) {
     return;
   }
@@ -36,7 +38,9 @@ void extendPolylineAtEnd(std::vector<math::Vec2>& poly, double extraDist) {
 
 // Interpolate point onto r == rMax on the segment (pa, pb). Assumes pa.y
 // and pb.y straddle rMax.
-math::Vec2 interpR(const math::Vec2& pa, const math::Vec2& pb, double rMax) {
+math::Vec2
+interpR(const math::Vec2& pa, const math::Vec2& pb, double rMax)
+{
   double denom = pb.y() - pa.y();
   if (std::abs(denom) < 1e-12) {
     return pa;
@@ -49,7 +53,9 @@ math::Vec2 interpR(const math::Vec2& pa, const math::Vec2& pb, double rMax) {
 // The marching squares tracer may emit polylines ordered either inlet->outlet
 // or outlet->inlet, so we must scan for any contiguous in-domain segment
 // and clip both ends with linear interpolation onto r == rMax.
-void clipPolylineAtRMax(std::vector<math::Vec2>& poly, double rMax) {
+void
+clipPolylineAtRMax(std::vector<math::Vec2>& poly, double rMax)
+{
   if (poly.empty()) {
     return;
   }
@@ -74,16 +80,16 @@ void clipPolylineAtRMax(std::vector<math::Vec2>& poly, double rMax) {
 
   // Optional head-interpolation if the polyline enters the domain.
   if (first > 0) {
-    out.push_back(interpR(poly[static_cast<std::size_t>(first - 1)],
-                          poly[static_cast<std::size_t>(first)], rMax));
+    out.push_back(interpR(
+      poly[static_cast<std::size_t>(first - 1)], poly[static_cast<std::size_t>(first)], rMax));
   }
   for (int i = first; i <= last; ++i) {
     out.push_back(poly[static_cast<std::size_t>(i)]);
   }
   // Optional tail-interpolation if the polyline exits the domain.
   if (last + 1 < static_cast<int>(poly.size())) {
-    out.push_back(interpR(poly[static_cast<std::size_t>(last)],
-                          poly[static_cast<std::size_t>(last + 1)], rMax));
+    out.push_back(interpR(
+      poly[static_cast<std::size_t>(last)], poly[static_cast<std::size_t>(last + 1)], rMax));
   }
 
   poly = std::move(out);
@@ -91,9 +97,11 @@ void clipPolylineAtRMax(std::vector<math::Vec2>& poly, double rMax) {
 
 } // namespace
 
-Result<FlowResults> FlowSolver::solve(const MeridionalGeometry& geom,
-                                      const PumpParams& params,
-                                      const CancelPredicate& isCancelled) noexcept {
+Result<FlowResults>
+FlowSolver::solve(const MeridionalGeometry& geom,
+                  const PumpParams& params,
+                  const CancelPredicate& isCancelled) noexcept
+{
   auto checkCancel = [&]() -> bool { return isCancelled && isCancelled(); };
 
   // 1. Resample hub/shroud to equal arc-length with nh points.
@@ -154,8 +162,7 @@ Result<FlowResults> FlowSolver::solve(const MeridionalGeometry& geom,
   // 5. Compute area profile. Use the ORIGINAL (non-extended) curves so
   //    the hub/shroud polylines the area bisection sees end exactly at
   //    r = d2/2.
-  auto areaResult =
-      computeAreaProfile(*femResult, geom.hubCurve, geom.shroudCurve, params);
+  auto areaResult = computeAreaProfile(*femResult, geom.hubCurve, geom.shroudCurve, params);
   if (!areaResult) {
     return std::unexpected(areaResult.error());
   }
@@ -195,8 +202,7 @@ Result<FlowResults> FlowSolver::solve(const MeridionalGeometry& geom,
       // Recompute the outlet area cleanly: 2*pi*r*chord with r=rMax.
       ap.flowAreas[keep] = 2.0 * std::numbers::pi * rMax * ap.chordLengths[keep];
       ap.arcLengths.resize(keep + 1);
-      ap.arcLengths[keep] =
-          ap.arcLengths[keep - 1] + (clipped - prev).norm();
+      ap.arcLengths[keep] = ap.arcLengths[keep - 1] + (clipped - prev).norm();
     }
   }
 
@@ -204,14 +210,15 @@ Result<FlowResults> FlowSolver::solve(const MeridionalGeometry& geom,
     logging::core()->debug("area F[0]={:.1f} F[1]={:.1f} F[last]={:.1f} (F1={:.1f} F2={:.1f})",
                            areaResult->flowAreas[0],
                            areaResult->flowAreas.size() > 1 ? areaResult->flowAreas[1] : 0.0,
-                           areaResult->flowAreas.back(), areaResult->f1, areaResult->f2);
+                           areaResult->flowAreas.back(),
+                           areaResult->f1,
+                           areaResult->f2);
   }
 
-
   return FlowResults{
-      .solution = std::move(*femResult),
-      .streamlines = std::move(streamlines),
-      .areaProfile = std::move(*areaResult),
+    .solution = std::move(*femResult),
+    .streamlines = std::move(streamlines),
+    .areaProfile = std::move(*areaResult),
   };
 }
 

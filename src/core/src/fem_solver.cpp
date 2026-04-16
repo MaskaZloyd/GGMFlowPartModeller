@@ -1,13 +1,13 @@
 #include "core/fem_solver.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <vector>
+
 #include <Eigen/Sparse>
 #include <Eigen/SparseLU>
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_for.h>
-
-#include <algorithm>
-#include <cmath>
-#include <vector>
 
 namespace ggm::core {
 
@@ -16,7 +16,8 @@ namespace {
 constexpr double R_CLAMP = 1e-9;
 constexpr double DET_TOL = 1e-15;
 
-struct TriLocal {
+struct TriLocal
+{
   Eigen::Matrix3d stiffness;
   Eigen::Matrix3d firstOrder;
   double area;
@@ -26,9 +27,9 @@ struct TriLocal {
 // Compute local stiffness and first-order matrices for a P1 triangle element.
 // Nodes: (z0,r0), (z1,r1), (z2,r2).
 // PDE: div(grad(psi)) - (1/r)*dpsi_dr = 0
-TriLocal computeElementMatrices(const math::Vec2& p0,
-                                const math::Vec2& p1,
-                                const math::Vec2& p2) noexcept {
+TriLocal
+computeElementMatrices(const math::Vec2& p0, const math::Vec2& p1, const math::Vec2& p2) noexcept
+{
   TriLocal result{};
 
   // z = x(), r = y()
@@ -63,9 +64,9 @@ TriLocal computeElementMatrices(const math::Vec2& p0,
   // Stiffness: K_ij = (grad_phi_i . grad_phi_j) * A
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
-      result.stiffness(i, j) = gradPhi[static_cast<std::size_t>(i)].dot(
-                                    gradPhi[static_cast<std::size_t>(j)]) *
-                                result.area;
+      result.stiffness(i, j) =
+        gradPhi[static_cast<std::size_t>(i)].dot(gradPhi[static_cast<std::size_t>(j)]) *
+        result.area;
     }
   }
 
@@ -75,7 +76,7 @@ TriLocal computeElementMatrices(const math::Vec2& p0,
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
       result.firstOrder(i, j) =
-          -(result.area / 3.0) * gradPhi[static_cast<std::size_t>(j)].y() / rElem;
+        -(result.area / 3.0) * gradPhi[static_cast<std::size_t>(j)].y() / rElem;
     }
   }
 
@@ -84,7 +85,9 @@ TriLocal computeElementMatrices(const math::Vec2& p0,
 
 } // namespace
 
-Result<FlowSolution> solveFem(StripGrid grid) noexcept {
+Result<FlowSolution>
+solveFem(StripGrid grid) noexcept
+{
   int totalNodes = grid.nh * grid.m;
   auto numTri = static_cast<int>(grid.triangles.size());
 
@@ -104,8 +107,7 @@ Result<FlowSolution> solveFem(StripGrid grid) noexcept {
     const auto& p2 = grid.nodes[static_cast<std::size_t>(tri[2])];
 
     // Force CCW orientation: if detJ < 0, swap vertices 1 and 2
-    double detJ = (p1.x() - p0.x()) * (p2.y() - p0.y()) -
-                  (p2.x() - p0.x()) * (p1.y() - p0.y());
+    double detJ = (p1.x() - p0.x()) * (p2.y() - p0.y()) - (p2.x() - p0.x()) * (p1.y() - p0.y());
     TriLocal local;
     if (detJ < 0.0) {
       local = computeElementMatrices(p0, p2, p1);
@@ -124,8 +126,8 @@ Result<FlowSolution> solveFem(StripGrid grid) noexcept {
       for (int j = 0; j < 3; ++j) {
         double val = combined(i, j);
         if (val != 0.0) {
-          triplets.emplace_back(tri[static_cast<std::size_t>(i)],
-                                tri[static_cast<std::size_t>(j)], val);
+          triplets.emplace_back(
+            tri[static_cast<std::size_t>(i)], tri[static_cast<std::size_t>(j)], val);
         }
       }
     }

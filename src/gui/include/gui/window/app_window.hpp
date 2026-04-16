@@ -8,7 +8,8 @@ struct GLFWwindow;
 
 namespace ggm::gui {
 
-struct WindowConfig {
+struct WindowConfig
+{
   int width = 1600;
   int height = 900;
   const char* title = "GGM Flow Part Modeller";
@@ -16,10 +17,10 @@ struct WindowConfig {
 
 // RAII wrapper for GLFW window + OpenGL context + ImGui initialization.
 // Destruction reverses init order: ImGui → GL context → GLFW.
-class AppWindow {
+class AppWindow
+{
 public:
-  [[nodiscard]] static std::expected<AppWindow, std::string> create(
-      WindowConfig cfg = {}) noexcept;
+  [[nodiscard]] static std::expected<AppWindow, std::string> create(WindowConfig cfg = {}) noexcept;
 
   ~AppWindow();
   AppWindow(const AppWindow&) = delete;

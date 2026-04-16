@@ -2,16 +2,17 @@
 
 #include "gui/solver_status_display.hpp"
 
-#include <imgui.h>
-
 #include <cmath>
+
+#include <imgui.h>
 
 namespace ggm::gui {
 
 namespace {
 
-void drawStatusIndicator(core::SolverStatus status,
-                         std::chrono::milliseconds lastDuration) noexcept {
+void
+drawStatusIndicator(core::SolverStatus status, std::chrono::milliseconds lastDuration) noexcept
+{
   const auto display = solverStatusPanel(status);
 
   // Colored dot + text
@@ -19,14 +20,12 @@ void drawStatusIndicator(core::SolverStatus status,
   ImVec2 cursor = ImGui::GetCursorScreenPos();
   float dotRadius = 6.0F;
   float lineHeight = ImGui::GetTextLineHeight();
-  ImVec2 dotCenter(cursor.x + dotRadius,
-                   cursor.y + (lineHeight * 0.5F));
+  ImVec2 dotCenter(cursor.x + dotRadius, cursor.y + (lineHeight * 0.5F));
 
   // Pulsating animation for Running state
   ImU32 dotColor = ImGui::ColorConvertFloat4ToU32(display.color);
   if (status == core::SolverStatus::Running) {
-    float pulse =
-        0.5F + 0.5F * std::sin(static_cast<float>(ImGui::GetTime()) * 4.0F);
+    float pulse = 0.5F + 0.5F * std::sin(static_cast<float>(ImGui::GetTime()) * 4.0F);
     ImVec4 pulsed = display.color;
     pulsed.w = 0.5F + 0.5F * pulse;
     dotColor = ImGui::ColorConvertFloat4ToU32(pulsed);
@@ -45,10 +44,12 @@ void drawStatusIndicator(core::SolverStatus status,
 
 } // namespace
 
-SettingsPanelResult drawSettingsPanel(const core::ComputationSettings& compSettings,
-                                     const RenderSettings& renderSettings,
-                                     core::SolverStatus solverStatus,
-                                     std::chrono::milliseconds lastDuration) noexcept {
+SettingsPanelResult
+drawSettingsPanel(const core::ComputationSettings& compSettings,
+                  const RenderSettings& renderSettings,
+                  core::SolverStatus solverStatus,
+                  std::chrono::milliseconds lastDuration) noexcept
+{
   SettingsPanelResult result;
   result.compSettings = compSettings;
   result.renderSettings = renderSettings;
@@ -122,12 +123,12 @@ SettingsPanelResult drawSettingsPanel(const core::ComputationSettings& compSetti
 
   result.compSettingsChanged = !(comp == compSettings);
   result.renderSettingsChanged =
-      (rend.showCoordGrid != renderSettings.showCoordGrid) ||
-      (rend.showComputationalGrid != renderSettings.showComputationalGrid) ||
-      (rend.hubLineWidth != renderSettings.hubLineWidth) ||
-      (rend.shroudLineWidth != renderSettings.shroudLineWidth) ||
-      (rend.meanLineWidth != renderSettings.meanLineWidth) ||
-      (rend.streamlineWidth != renderSettings.streamlineWidth);
+    (rend.showCoordGrid != renderSettings.showCoordGrid) ||
+    (rend.showComputationalGrid != renderSettings.showComputationalGrid) ||
+    (rend.hubLineWidth != renderSettings.hubLineWidth) ||
+    (rend.shroudLineWidth != renderSettings.shroudLineWidth) ||
+    (rend.meanLineWidth != renderSettings.meanLineWidth) ||
+    (rend.streamlineWidth != renderSettings.streamlineWidth);
 
   return result;
 }

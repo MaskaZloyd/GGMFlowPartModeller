@@ -1,12 +1,12 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
-
 #include "core/fem_solver.hpp"
 #include "core/logging.hpp"
 #include "core/strip_grid.hpp"
 #include "math/types.hpp"
 
 #include <vector>
+
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 using namespace ggm::core;
 using namespace ggm::math;

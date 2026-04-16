@@ -4,10 +4,9 @@
 
 namespace ggm::math {
 
-ArcBezier arcToBezier(const Vec2& center,
-                      double radius,
-                      double startAngle,
-                      double endAngle) noexcept {
+ArcBezier
+arcToBezier(const Vec2& center, double radius, double startAngle, double endAngle) noexcept
+{
   double delta = endAngle - startAngle;
   double phi = delta / 2.0;
   double weight = std::cos(phi);
@@ -23,12 +22,16 @@ ArcBezier arcToBezier(const Vec2& center,
   return {.p0 = pointStart, .p1 = pointMid, .p2 = pointEnd, .w1 = weight};
 }
 
-ArcBezier segToBezier(const Vec2& start, const Vec2& end) noexcept {
+ArcBezier
+segToBezier(const Vec2& start, const Vec2& end) noexcept
+{
   Vec2 mid = (start + end) / 2.0;
   return {.p0 = start, .p1 = mid, .p2 = end, .w1 = 1.0};
 }
 
-Vec2 evalRationalQuadratic(const ArcBezier& seg, double param) noexcept {
+Vec2
+evalRationalQuadratic(const ArcBezier& seg, double param) noexcept
+{
   double oneMinusT = 1.0 - param;
   double basis0 = oneMinusT * oneMinusT;
   double basis1 = 2.0 * oneMinusT * param;
@@ -39,7 +42,9 @@ Vec2 evalRationalQuadratic(const ArcBezier& seg, double param) noexcept {
   return numer / denom;
 }
 
-std::vector<Vec2> evaluateSegment(const ArcBezier& seg, int numPoints) noexcept {
+std::vector<Vec2>
+evaluateSegment(const ArcBezier& seg, int numPoints) noexcept
+{
   std::vector<Vec2> result;
   result.reserve(static_cast<std::size_t>(numPoints));
   for (int idx = 0; idx < numPoints; ++idx) {

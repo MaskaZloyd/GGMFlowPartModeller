@@ -7,9 +7,6 @@
 #include "core/geometry.hpp"
 #include "core/pump_params.hpp"
 
-#include <tbb/task_arena.h>
-#include <tbb/task_group.h>
-
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -17,9 +14,13 @@
 #include <mutex>
 #include <optional>
 
+#include <tbb/task_arena.h>
+#include <tbb/task_group.h>
+
 namespace ggm::core {
 
-enum class SolverStatus {
+enum class SolverStatus
+{
   Idle,
   Running,
   Success,
@@ -37,7 +38,8 @@ enum class SolverStatus {
 //
 // Cancellation: a pending job is cancelled cooperatively at pipeline stage
 // boundaries via a generation-counter based predicate.
-class AsyncFlowSolver {
+class AsyncFlowSolver
+{
 public:
   AsyncFlowSolver();
   ~AsyncFlowSolver() noexcept;
@@ -47,9 +49,7 @@ public:
   AsyncFlowSolver& operator=(AsyncFlowSolver&&) = delete;
 
   // Submit a new job. Cancels any in-flight job.
-  void submit(MeridionalGeometry geom,
-              PumpParams params,
-              ComputationSettings settings) noexcept;
+  void submit(MeridionalGeometry geom, PumpParams params, ComputationSettings settings) noexcept;
 
   // Returns true if a new successful result was applied this call.
   // Call from UI thread every frame.

@@ -4,21 +4,26 @@
 
 namespace ggm::gui {
 
-Fbo::~Fbo() {
+Fbo::~Fbo()
+{
   destroy();
 }
 
 Fbo::Fbo(Fbo&& other) noexcept
-    : msFbo_(std::exchange(other.msFbo_, 0))
-    , msColorRbo_(std::exchange(other.msColorRbo_, 0))
-    , msDepthRbo_(std::exchange(other.msDepthRbo_, 0))
-    , fbo_(std::exchange(other.fbo_, 0))
-    , colorTex_(std::exchange(other.colorTex_, 0))
-    , width_(std::exchange(other.width_, 0))
-    , height_(std::exchange(other.height_, 0))
-    , samples_(std::exchange(other.samples_, 0)) {}
+  : msFbo_(std::exchange(other.msFbo_, 0)),
+    msColorRbo_(std::exchange(other.msColorRbo_, 0)),
+    msDepthRbo_(std::exchange(other.msDepthRbo_, 0)),
+    fbo_(std::exchange(other.fbo_, 0)),
+    colorTex_(std::exchange(other.colorTex_, 0)),
+    width_(std::exchange(other.width_, 0)),
+    height_(std::exchange(other.height_, 0)),
+    samples_(std::exchange(other.samples_, 0))
+{
+}
 
-Fbo& Fbo::operator=(Fbo&& other) noexcept {
+Fbo&
+Fbo::operator=(Fbo&& other) noexcept
+{
   if (this != &other) {
     destroy();
     msFbo_ = std::exchange(other.msFbo_, 0);
@@ -33,7 +38,9 @@ Fbo& Fbo::operator=(Fbo&& other) noexcept {
   return *this;
 }
 
-core::Result<void> Fbo::resize(int width, int height) noexcept {
+core::Result<void>
+Fbo::resize(int width, int height) noexcept
+{
   if (width == width_ && height == height_ && msFbo_ != 0) {
     return {};
   }
@@ -69,8 +76,8 @@ core::Result<void> Fbo::resize(int width, int height) noexcept {
   glGenRenderbuffers(1, &msDepthRbo_);
   glBindRenderbuffer(GL_RENDERBUFFER, msDepthRbo_);
   glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_DEPTH24_STENCIL8, width, height);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER,
-                            msDepthRbo_);
+  glFramebufferRenderbuffer(
+    GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, msDepthRbo_);
 
   auto msStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
   if (msStatus != GL_FRAMEBUFFER_COMPLETE) {
@@ -101,21 +108,26 @@ core::Result<void> Fbo::resize(int width, int height) noexcept {
   return {};
 }
 
-void Fbo::bind() noexcept {
+void
+Fbo::bind() noexcept
+{
   glBindFramebuffer(GL_FRAMEBUFFER, msFbo_);
   glViewport(0, 0, width_, height_);
 }
 
-void Fbo::unbind() noexcept {
+void
+Fbo::unbind() noexcept
+{
   // Resolve: blit from multisampled -> single-sample texture.
   glBindFramebuffer(GL_READ_FRAMEBUFFER, msFbo_);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_);
-  glBlitFramebuffer(0, 0, width_, height_, 0, 0, width_, height_, GL_COLOR_BUFFER_BIT,
-                    GL_LINEAR);
+  glBlitFramebuffer(0, 0, width_, height_, 0, 0, width_, height_, GL_COLOR_BUFFER_BIT, GL_LINEAR);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Fbo::destroy() noexcept {
+void
+Fbo::destroy() noexcept
+{
   if (colorTex_ != 0) {
     glDeleteTextures(1, &colorTex_);
     colorTex_ = 0;

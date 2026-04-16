@@ -1,10 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
-
 #include "core/strip_grid.hpp"
 #include "math/types.hpp"
 
 #include <vector>
+
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 using namespace ggm::core;
 using namespace ggm::math;
@@ -70,7 +70,8 @@ TEST_CASE("buildStripGrid: boundary node counts equal nh", "[strip_grid]")
   REQUIRE(static_cast<int>(result->shroudNodes.size()) == nh);
 }
 
-TEST_CASE("buildStripGrid: hub nodes have r=0, shroud nodes have r=2 (before smoothing)", "[strip_grid]")
+TEST_CASE("buildStripGrid: hub nodes have r=0, shroud nodes have r=2 (before smoothing)",
+          "[strip_grid]")
 {
   // Use a large nh so that boundary pinning dominates over smoothing
   constexpr int nh = 10;

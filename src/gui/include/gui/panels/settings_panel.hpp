@@ -8,7 +8,8 @@
 
 namespace ggm::gui {
 
-struct SettingsPanelResult {
+struct SettingsPanelResult
+{
   core::ComputationSettings compSettings;
   RenderSettings renderSettings;
   bool compSettingsChanged = false;
@@ -17,9 +18,10 @@ struct SettingsPanelResult {
   bool cancelRequested = false;
 };
 
-SettingsPanelResult drawSettingsPanel(const core::ComputationSettings& compSettings,
-                                     const RenderSettings& renderSettings,
-                                     core::SolverStatus solverStatus,
-                                     std::chrono::milliseconds lastDuration) noexcept;
+SettingsPanelResult
+drawSettingsPanel(const core::ComputationSettings& compSettings,
+                  const RenderSettings& renderSettings,
+                  core::SolverStatus solverStatus,
+                  std::chrono::milliseconds lastDuration) noexcept;
 
 } // namespace ggm::gui

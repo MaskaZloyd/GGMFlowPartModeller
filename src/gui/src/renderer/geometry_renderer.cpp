@@ -187,13 +187,13 @@ public:
               const GLint colorUniformLocation,
               const float maxLineWidth,
               std::vector<float>& scratchVertices) noexcept
-    : shaderProgram_(shaderProgram)
-    , vao_(vao)
-    , vbo_(vbo)
-    , viewportUniformLocation_(viewportUniformLocation)
-    , colorUniformLocation_(colorUniformLocation)
-    , maxLineWidth_(maxLineWidth)
-    , scratchVertices_(scratchVertices)
+    : shaderProgram_(shaderProgram),
+      vao_(vao),
+      vbo_(vbo),
+      viewportUniformLocation_(viewportUniformLocation),
+      colorUniformLocation_(colorUniformLocation),
+      maxLineWidth_(maxLineWidth),
+      scratchVertices_(scratchVertices)
   {
     glUseProgram(shaderProgram_);
     glBindVertexArray(vao_);
@@ -356,9 +356,7 @@ appendLine(std::vector<float>& vertices,
 }
 
 void
-fillGridVertices(std::vector<float>& vertices,
-                 const BoundingBox& bounds,
-                 double gridStep)
+fillGridVertices(std::vector<float>& vertices, const BoundingBox& bounds, double gridStep)
 {
   vertices.clear();
   if (!bounds.hasData() || gridStep <= 0.0) {
@@ -641,9 +639,13 @@ GeometryRenderer::render(const core::MeridionalGeometry& geom,
   }
 
   const auto viewport = makeViewport(geom, viewportWidth, viewportHeight);
-  auto drawSession = DrawSession{
-    shaderProgram_, vao_, vbo_, viewportUniformLocation_, colorUniformLocation_, maxLineWidth_,
-    scratchVertices_};
+  auto drawSession = DrawSession{shaderProgram_,
+                                 vao_,
+                                 vbo_,
+                                 viewportUniformLocation_,
+                                 colorUniformLocation_,
+                                 maxLineWidth_,
+                                 scratchVertices_};
   drawSession.setViewport(viewport);
 
   if (settings.showCoordGrid) {

@@ -6,7 +6,9 @@
 
 namespace ggm::gui {
 
-void drawLogPanel() noexcept {
+void
+drawLogPanel() noexcept
+{
   ImGui::Begin("Log");
 
   auto sink = logging::guiSink();
@@ -15,8 +17,8 @@ void drawLogPanel() noexcept {
   ImGui::Text("Messages: %zu", messages.size());
   ImGui::Separator();
 
-  ImGui::BeginChild("##LogScroll", ImVec2(0, 0), ImGuiChildFlags_None,
-                    ImGuiWindowFlags_HorizontalScrollbar);
+  ImGui::BeginChild(
+    "##LogScroll", ImVec2(0, 0), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
 
   for (const auto& msg : messages) {
     ImGui::TextUnformatted(msg.c_str());

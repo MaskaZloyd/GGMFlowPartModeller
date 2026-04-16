@@ -4,7 +4,9 @@
 
 namespace ggm::gui {
 
-void UndoStack::push(EditCommand cmd) {
+void
+UndoStack::push(EditCommand cmd)
+{
   // Truncate any redo history above cursor
   while (static_cast<int>(stack_.size()) > cursor_ + 1) {
     stack_.pop_back();
@@ -20,42 +22,60 @@ void UndoStack::push(EditCommand cmd) {
   }
 }
 
-void UndoStack::clear() noexcept {
+void
+UndoStack::clear() noexcept
+{
   stack_.clear();
   cursor_ = -1;
 }
 
-bool UndoStack::canUndo() const noexcept {
+bool
+UndoStack::canUndo() const noexcept
+{
   return cursor_ >= 0;
 }
 
-bool UndoStack::canRedo() const noexcept {
+bool
+UndoStack::canRedo() const noexcept
+{
   return cursor_ < static_cast<int>(stack_.size()) - 1;
 }
 
-const core::PumpParams& UndoStack::undoParams() const noexcept {
+const core::PumpParams&
+UndoStack::undoParams() const noexcept
+{
   return stack_[static_cast<std::size_t>(cursor_)].before;
 }
 
-const core::PumpParams& UndoStack::redoParams() const noexcept {
+const core::PumpParams&
+UndoStack::redoParams() const noexcept
+{
   return stack_[static_cast<std::size_t>(cursor_ + 1)].after;
 }
 
-std::string_view UndoStack::undoLabel() const noexcept {
+std::string_view
+UndoStack::undoLabel() const noexcept
+{
   return stack_[static_cast<std::size_t>(cursor_)].label;
 }
 
-std::string_view UndoStack::redoLabel() const noexcept {
+std::string_view
+UndoStack::redoLabel() const noexcept
+{
   return stack_[static_cast<std::size_t>(cursor_ + 1)].label;
 }
 
-void UndoStack::undo() noexcept {
+void
+UndoStack::undo() noexcept
+{
   if (canUndo()) {
     --cursor_;
   }
 }
 
-void UndoStack::redo() noexcept {
+void
+UndoStack::redo() noexcept
+{
   if (canRedo()) {
     ++cursor_;
   }

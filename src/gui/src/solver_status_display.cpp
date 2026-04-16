@@ -2,7 +2,9 @@
 
 namespace ggm::gui {
 
-StatusDisplay solverStatusBar(core::SolverStatus status) noexcept {
+StatusDisplay
+solverStatusBar(core::SolverStatus status) noexcept
+{
   switch (status) {
     case core::SolverStatus::Idle:
       return {{0.45F, 0.48F, 0.54F, 1.0F}, "ожидание"};
@@ -18,7 +20,9 @@ StatusDisplay solverStatusBar(core::SolverStatus status) noexcept {
   return {{0.2F, 0.2F, 0.2F, 1.0F}, "?"};
 }
 
-StatusDisplay solverStatusPanel(core::SolverStatus status) noexcept {
+StatusDisplay
+solverStatusPanel(core::SolverStatus status) noexcept
+{
   switch (status) {
     case core::SolverStatus::Idle:
       return {{0.65F, 0.65F, 0.65F, 1.0F}, "ожидание"};

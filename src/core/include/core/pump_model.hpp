@@ -7,7 +7,8 @@
 
 namespace ggm::core {
 
-class PumpModel {
+class PumpModel
+{
 public:
   PumpModel() = default;
 
@@ -15,9 +16,7 @@ public:
   [[nodiscard]] const MeridionalGeometry& geometry() const noexcept { return geometry_; }
   [[nodiscard]] bool geometryValid() const noexcept { return geometryValid_; }
 
-  [[nodiscard]] const ComputationSettings& compSettings() const noexcept {
-    return compSettings_;
-  }
+  [[nodiscard]] const ComputationSettings& compSettings() const noexcept { return compSettings_; }
 
   // Set new parameters. Returns the old params (for undo).
   PumpParams setParams(PumpParams newParams) noexcept;

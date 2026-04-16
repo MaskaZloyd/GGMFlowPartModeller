@@ -1,8 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "core/pump_params.hpp"
 #include "gui/commands/edit_command.hpp"
 #include "gui/commands/undo_stack.hpp"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace ggm;
 

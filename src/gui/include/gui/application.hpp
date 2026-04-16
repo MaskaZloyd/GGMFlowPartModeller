@@ -17,7 +17,8 @@
 
 namespace ggm::gui {
 
-class Application {
+class Application
+{
 public:
   [[nodiscard]] static std::expected<Application, std::string> create() noexcept;
 

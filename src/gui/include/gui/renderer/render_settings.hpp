@@ -2,7 +2,8 @@
 
 namespace ggm::gui {
 
-struct RenderSettings {
+struct RenderSettings
+{
   bool showCoordGrid = true;
   bool showComputationalGrid = false;
   float hubLineWidth = 2.5F;

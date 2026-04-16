@@ -10,7 +10,9 @@
 
 namespace ggm::gui {
 
-std::expected<AppWindow, std::string> AppWindow::create(WindowConfig cfg) noexcept {
+std::expected<AppWindow, std::string>
+AppWindow::create(WindowConfig cfg) noexcept
+{
   if (glfwInit() == GLFW_FALSE) {
     return std::unexpected(std::string("Failed to initialize GLFW"));
   }
@@ -41,12 +43,13 @@ std::expected<AppWindow, std::string> AppWindow::create(WindowConfig cfg) noexce
   imguiIo.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
   // Load a font with Cyrillic glyphs. Try common system paths.
-  constexpr const char* FONT_CANDIDATES[] = { // NOLINT
-      "/usr/share/fonts/TTF/DejaVuSans.ttf",
-      "/usr/share/fonts/dejavu/DejaVuSans.ttf",
-      "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-      "/Library/Fonts/DejaVuSans.ttf",
-      "C:/Windows/Fonts/DejaVuSans.ttf",
+  constexpr const char* FONT_CANDIDATES[] = {
+    // NOLINT
+    "/usr/share/fonts/TTF/DejaVuSans.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/Library/Fonts/DejaVuSans.ttf",
+    "C:/Windows/Fonts/DejaVuSans.ttf",
   };
   const ImWchar* cyrillicRanges = imguiIo.Fonts->GetGlyphRangesCyrillic();
   bool fontLoaded = false;
@@ -71,17 +74,22 @@ std::expected<AppWindow, std::string> AppWindow::create(WindowConfig cfg) noexce
   return result;
 }
 
-AppWindow::~AppWindow() {
+AppWindow::~AppWindow()
+{
   destroy();
 }
 
 AppWindow::AppWindow(AppWindow&& other) noexcept
-    : window_(other.window_), imguiInitialized_(other.imguiInitialized_) {
+  : window_(other.window_),
+    imguiInitialized_(other.imguiInitialized_)
+{
   other.window_ = nullptr;
   other.imguiInitialized_ = false;
 }
 
-AppWindow& AppWindow::operator=(AppWindow&& other) noexcept {
+AppWindow&
+AppWindow::operator=(AppWindow&& other) noexcept
+{
   if (this != &other) {
     destroy();
     window_ = other.window_;
@@ -92,21 +100,27 @@ AppWindow& AppWindow::operator=(AppWindow&& other) noexcept {
   return *this;
 }
 
-bool AppWindow::shouldClose() const noexcept {
+bool
+AppWindow::shouldClose() const noexcept
+{
   if (window_ == nullptr) {
     return true;
   }
   return glfwWindowShouldClose(window_) != 0;
 }
 
-void AppWindow::beginFrame() noexcept {
+void
+AppWindow::beginFrame() noexcept
+{
   glfwPollEvents();
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
 }
 
-void AppWindow::endFrame() noexcept {
+void
+AppWindow::endFrame() noexcept
+{
   ImGui::Render();
   auto [width, height] = framebufferSize();
   glViewport(0, 0, width, height);
@@ -116,7 +130,9 @@ void AppWindow::endFrame() noexcept {
   glfwSwapBuffers(window_);
 }
 
-std::pair<int, int> AppWindow::framebufferSize() const noexcept {
+std::pair<int, int>
+AppWindow::framebufferSize() const noexcept
+{
   int width = 0;
   int height = 0;
   if (window_ != nullptr) {
@@ -125,7 +141,9 @@ std::pair<int, int> AppWindow::framebufferSize() const noexcept {
   return {width, height};
 }
 
-void AppWindow::destroy() noexcept {
+void
+AppWindow::destroy() noexcept
+{
   if (imguiInitialized_) {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();

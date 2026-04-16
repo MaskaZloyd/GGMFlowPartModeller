@@ -12,8 +12,9 @@ namespace {
 // and inlet/outlet rows stay pinned so boundary conditions remain valid.
 // This gives the strip grid a more orthogonal look through curved sections
 // without changing its topology.
-void smoothInterior(std::vector<math::Vec2>& nodes, int nh, int mm,
-                    int iterations, double relax) {
+void
+smoothInterior(std::vector<math::Vec2>& nodes, int nh, int mm, int iterations, double relax)
+{
   if (nh < 3 || mm < 3 || iterations <= 0) {
     return;
   }
@@ -44,9 +45,9 @@ void smoothInterior(std::vector<math::Vec2>& nodes, int nh, int mm,
 
 } // namespace
 
-Result<StripGrid> buildStripGrid(std::span<const math::Vec2> hub,
-                                 std::span<const math::Vec2> shroud,
-                                 int m) noexcept {
+Result<StripGrid>
+buildStripGrid(std::span<const math::Vec2> hub, std::span<const math::Vec2> shroud, int m) noexcept
+{
   auto nh = static_cast<int>(hub.size());
   if (hub.size() != shroud.size() || nh < 2 || m < 3) {
     return std::unexpected(CoreError::GridBuildFailed);
@@ -66,8 +67,7 @@ Result<StripGrid> buildStripGrid(std::span<const math::Vec2> hub,
     auto ui = static_cast<std::size_t>(i);
     for (int j = 0; j < m; ++j) {
       double t = static_cast<double>(j) / static_cast<double>(m - 1);
-      grid.nodes[static_cast<std::size_t>(i * m + j)] =
-          (1.0 - t) * hub[ui] + t * shroud[ui];
+      grid.nodes[static_cast<std::size_t>(i * m + j)] = (1.0 - t) * hub[ui] + t * shroud[ui];
     }
     grid.hubNodes.push_back(i * m);
     grid.shroudNodes.push_back(i * m + (m - 1));

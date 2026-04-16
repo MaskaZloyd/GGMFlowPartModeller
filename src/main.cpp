@@ -4,7 +4,9 @@
 #include <cstdlib>
 #include <print>
 
-int main() {
+int
+main()
+{
   ggm::logging::init();
   auto app = ggm::gui::Application::create();
   if (!app) {

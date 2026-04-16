@@ -1,5 +1,7 @@
 #include "gui/application.hpp"
 
+#include "core/logging.hpp"
+#include "core/serialization.hpp"
 #include "gui/layout/dockspace.hpp"
 #include "gui/panels/charts_panel.hpp"
 #include "gui/panels/geometry_panel.hpp"
@@ -7,20 +9,21 @@
 #include "gui/panels/params_panel.hpp"
 #include "gui/panels/settings_panel.hpp"
 
-#include "core/logging.hpp"
-#include "core/serialization.hpp"
+#include <memory>
 
 #include <GLFW/glfw3.h>
-
-#include <memory>
 
 namespace ggm::gui {
 
 Application::Application(AppWindow window)
-    : window_(std::move(window))
-    , asyncSolver_(std::make_unique<core::AsyncFlowSolver>()) {}
+  : window_(std::move(window)),
+    asyncSolver_(std::make_unique<core::AsyncFlowSolver>())
+{
+}
 
-std::expected<Application, std::string> Application::create() noexcept {
+std::expected<Application, std::string>
+Application::create() noexcept
+{
   auto window = AppWindow::create();
   if (!window) {
     return std::unexpected(window.error());
@@ -29,15 +32,13 @@ std::expected<Application, std::string> Application::create() noexcept {
   Application app(std::move(*window));
 
   if (auto rebuilt = app.model_.rebuildGeometry(); !rebuilt) {
-    logging::gui()->warn("Ошибка построения геометрии: {}",
-                         core::toString(rebuilt.error()));
+    logging::gui()->warn("Ошибка построения геометрии: {}", core::toString(rebuilt.error()));
   }
   logging::gui()->info("Приложение запущено");
 
   if (app.model_.geometryValid()) {
     logging::gui()->info("Построена начальная геометрия");
-    app.asyncSolver_->submit(app.model_.geometry(), app.model_.params(),
-                             app.model_.compSettings());
+    app.asyncSolver_->submit(app.model_.geometry(), app.model_.params(), app.model_.compSettings());
   } else {
     logging::gui()->warn("Не удалось построить начальную геометрию");
   }
@@ -45,18 +46,19 @@ std::expected<Application, std::string> Application::create() noexcept {
   return app;
 }
 
-int Application::run() noexcept {
+int
+Application::run() noexcept
+{
   while (!window_.shouldClose()) {
     window_.beginFrame();
 
     if (asyncSolver_->poll()) {
-      logging::gui()->info("Расчёт завершён за {} мс",
-                           asyncSolver_->lastDuration().count());
+      logging::gui()->info("Расчёт завершён за {} мс", asyncSolver_->lastDuration().count());
     }
 
     auto actions = buildDockspace(undoStack_.canUndo(), undoStack_.canRedo());
-    drawStatusBar(currentPath_.filename().string(), asyncSolver_->status(),
-                  asyncSolver_->lastDuration());
+    drawStatusBar(
+      currentPath_.filename().string(), asyncSolver_->status(), asyncSolver_->lastDuration());
 
     if (actions.requestNew) {
       handleNew();
@@ -87,8 +89,7 @@ int Application::run() noexcept {
     if (liveChanged) {
       model_.setParams(panelResult.liveParams);
       if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
-        logging::gui()->warn("Ошибка построения геометрии: {}",
-                             core::toString(rebuilt.error()));
+        logging::gui()->warn("Ошибка построения геометрии: {}", core::toString(rebuilt.error()));
       }
     }
 
@@ -108,13 +109,16 @@ int Application::run() noexcept {
     const core::FlowResults* flowPtr = flowSnapshot.get();
     bool flowValid = flowSnapshot != nullptr;
 
-    drawGeometryPanel(geometryFbo_, geometryRenderer_, model_.geometry(),
-                      flowPtr, renderSettings_, model_.geometryValid());
+    drawGeometryPanel(geometryFbo_,
+                      geometryRenderer_,
+                      model_.geometry(),
+                      flowPtr,
+                      renderSettings_,
+                      model_.geometryValid());
     drawChartsPanel(flowPtr, flowValid);
 
-    auto settingsResult = drawSettingsPanel(model_.compSettings(), renderSettings_,
-                                            asyncSolver_->status(),
-                                            asyncSolver_->lastDuration());
+    auto settingsResult = drawSettingsPanel(
+      model_.compSettings(), renderSettings_, asyncSolver_->status(), asyncSolver_->lastDuration());
     if (settingsResult.renderSettingsChanged) {
       renderSettings_ = settingsResult.renderSettings;
     }
@@ -140,35 +144,39 @@ int Application::run() noexcept {
   return 0;
 }
 
-void Application::handleUndo() noexcept {
+void
+Application::handleUndo() noexcept
+{
   if (!undoStack_.canUndo()) {
     return;
   }
   const auto& params = undoStack_.undoParams();
   model_.setParams(params);
   if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
-    logging::gui()->warn("Ошибка построения геометрии: {}",
-                         core::toString(rebuilt.error()));
+    logging::gui()->warn("Ошибка построения геометрии: {}", core::toString(rebuilt.error()));
   }
   undoStack_.undo();
   logging::gui()->info("Undo");
 }
 
-void Application::handleRedo() noexcept {
+void
+Application::handleRedo() noexcept
+{
   if (!undoStack_.canRedo()) {
     return;
   }
   const auto& params = undoStack_.redoParams();
   model_.setParams(params);
   if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
-    logging::gui()->warn("Ошибка построения геометрии: {}",
-                         core::toString(rebuilt.error()));
+    logging::gui()->warn("Ошибка построения геометрии: {}", core::toString(rebuilt.error()));
   }
   undoStack_.redo();
   logging::gui()->info("Redo");
 }
 
-void Application::handleSave() noexcept {
+void
+Application::handleSave() noexcept
+{
   if (currentPath_.empty()) {
     handleSaveAs();
     return;
@@ -181,25 +189,28 @@ void Application::handleSave() noexcept {
   }
 }
 
-void Application::handleSaveAs() noexcept {
+void
+Application::handleSaveAs() noexcept
+{
   currentPath_ = "pump_project.ggm";
   handleSave();
 }
 
-void Application::handleOpen() noexcept {
+void
+Application::handleOpen() noexcept
+{
   std::filesystem::path path = "pump_project.ggm";
   auto result = core::loadParams(path);
   if (result) {
     auto oldParams = model_.params();
     model_.setParams(*result);
     if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
-      logging::gui()->warn("Ошибка построения геометрии: {}",
-                           core::toString(rebuilt.error()));
+      logging::gui()->warn("Ошибка построения геометрии: {}", core::toString(rebuilt.error()));
     }
     undoStack_.push(EditCommand{
-        .before = oldParams,
-        .after = *result,
-        .label = "Open file",
+      .before = oldParams,
+      .after = *result,
+      .label = "Open file",
     });
     currentPath_ = path;
     logging::gui()->info("Загружено из {}", path.string());
@@ -208,18 +219,19 @@ void Application::handleOpen() noexcept {
   }
 }
 
-void Application::handleNew() noexcept {
+void
+Application::handleNew() noexcept
+{
   auto oldParams = model_.params();
   core::PumpParams defaultParams;
   model_.setParams(defaultParams);
   if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
-    logging::gui()->warn("Ошибка построения геометрии: {}",
-                         core::toString(rebuilt.error()));
+    logging::gui()->warn("Ошибка построения геометрии: {}", core::toString(rebuilt.error()));
   }
   undoStack_.push(EditCommand{
-      .before = oldParams,
-      .after = defaultParams,
-      .label = "New project",
+    .before = oldParams,
+    .after = defaultParams,
+    .label = "New project",
   });
   currentPath_.clear();
   logging::gui()->info("Новый проект");

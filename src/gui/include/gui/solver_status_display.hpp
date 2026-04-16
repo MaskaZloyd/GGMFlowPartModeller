@@ -13,9 +13,11 @@ struct StatusDisplay
 };
 
 // Status-bar styling: saturated utility colors for the compact footer.
-[[nodiscard]] StatusDisplay solverStatusBar(core::SolverStatus status) noexcept;
+[[nodiscard]] StatusDisplay
+solverStatusBar(core::SolverStatus status) noexcept;
 
 // Settings panel styling: soft UI-theme colors for the indicator block.
-[[nodiscard]] StatusDisplay solverStatusPanel(core::SolverStatus status) noexcept;
+[[nodiscard]] StatusDisplay
+solverStatusPanel(core::SolverStatus status) noexcept;
 
 } // namespace ggm::gui

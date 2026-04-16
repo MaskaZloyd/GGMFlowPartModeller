@@ -6,7 +6,9 @@
 
 namespace ggm::math {
 
-std::vector<double> cumulativeArcLength(std::span<const Vec2> polyline) noexcept {
+std::vector<double>
+cumulativeArcLength(std::span<const Vec2> polyline) noexcept
+{
   std::vector<double> s(polyline.size(), 0.0);
   for (std::size_t i = 1; i < polyline.size(); ++i) {
     s[i] = s[i - 1] + (polyline[i] - polyline[i - 1]).norm();
@@ -20,7 +22,9 @@ std::vector<double> cumulativeArcLength(std::span<const Vec2> polyline) noexcept
   return s;
 }
 
-std::vector<Vec2> resampleArcLength(std::span<const Vec2> polyline, int n) noexcept {
+std::vector<Vec2>
+resampleArcLength(std::span<const Vec2> polyline, int n) noexcept
+{
   if (n <= 0 || polyline.size() < 2) {
     return {};
   }

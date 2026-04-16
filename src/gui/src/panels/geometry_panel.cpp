@@ -3,19 +3,21 @@
 #include "core/geometry.hpp"
 #include "renderer/gl_headers.hpp"
 
-#include <imgui.h>
-
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+
+#include <imgui.h>
 
 namespace ggm::gui {
 
 namespace {
 
 // Pick a round scale-bar length that occupies ~15% of the viewport width.
-double niceScaleLength(double pxPerMm, float widthPx) noexcept {
+double
+niceScaleLength(double pxPerMm, float widthPx) noexcept
+{
   double targetMm = (widthPx * 0.15F) / pxPerMm;
   if (targetMm <= 0.0) {
     return 1.0;
@@ -31,21 +33,24 @@ double niceScaleLength(double pxPerMm, float widthPx) noexcept {
   return step * mag;
 }
 
-void drawLegend(ImDrawList* dl, ImVec2 topLeft) {
+void
+drawLegend(ImDrawList* dl, ImVec2 topLeft)
+{
   constexpr ImU32 BG = IM_COL32(255, 255, 255, 215);
   constexpr ImU32 BORDER = IM_COL32(180, 180, 190, 255);
   constexpr ImU32 TEXT = IM_COL32(40, 40, 60, 255);
 
-  struct Entry {
+  struct Entry
+  {
     ImU32 color;
     const char* label;
   };
   const Entry entries[] = {
-      {IM_COL32(199, 51, 46, 255), "Втулка (hub)"},
-      {IM_COL32(46, 92, 199, 255), "Покрывной диск (shroud)"},
-      {IM_COL32(77, 158, 77, 255), "Средняя линия"},
-      {IM_COL32(68, 1, 84, 255), "Линия тока ψ = 0"},
-      {IM_COL32(253, 231, 37, 255), "Линия тока ψ = 1"},
+    {IM_COL32(199, 51, 46, 255), "Втулка (hub)"},
+    {IM_COL32(46, 92, 199, 255), "Покрывной диск (shroud)"},
+    {IM_COL32(77, 158, 77, 255), "Средняя линия"},
+    {IM_COL32(68, 1, 84, 255), "Линия тока ψ = 0"},
+    {IM_COL32(253, 231, 37, 255), "Линия тока ψ = 1"},
   };
 
   float lineH = ImGui::GetTextLineHeightWithSpacing();
@@ -66,8 +71,9 @@ void drawLegend(ImDrawList* dl, ImVec2 topLeft) {
   }
 }
 
-void drawScaleBar(ImDrawList* dl, ImVec2 imgMin, ImVec2 imgMax,
-                  const ViewportMap& vp) {
+void
+drawScaleBar(ImDrawList* dl, ImVec2 imgMin, ImVec2 imgMax, const ViewportMap& vp)
+{
   if (vp.widthPx <= 0 || vp.maxZ <= vp.minZ) {
     return;
   }
@@ -94,12 +100,14 @@ void drawScaleBar(ImDrawList* dl, ImVec2 imgMin, ImVec2 imgMax,
 
 } // namespace
 
-void drawGeometryPanel(Fbo& fbo,
-                       GeometryRenderer& renderer,
-                       const core::MeridionalGeometry& geom,
-                       const core::FlowResults* flow,
-                       const RenderSettings& renderSettings,
-                       bool geometryValid) noexcept {
+void
+drawGeometryPanel(Fbo& fbo,
+                  GeometryRenderer& renderer,
+                  const core::MeridionalGeometry& geom,
+                  const core::FlowResults* flow,
+                  const RenderSettings& renderSettings,
+                  bool geometryValid) noexcept
+{
   ImGui::Begin("Геометрия");
 
   ImVec2 avail = ImGui::GetContentRegionAvail();

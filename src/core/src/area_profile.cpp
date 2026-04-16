@@ -1,12 +1,12 @@
 #include "core/area_profile.hpp"
 
-#include <tbb/parallel_for.h>
-
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <numbers>
 #include <optional>
+
+#include <tbb/parallel_for.h>
 
 namespace ggm::core {
 
@@ -16,8 +16,9 @@ constexpr int BISECTION_ITERS = 64;
 constexpr double BISECTION_TOL = 1e-10;
 
 // Find the minimum distance from point P to a polyline (set of segments).
-double distToPolyline(const math::Vec2& point,
-                      std::span<const math::Vec2> polyline) noexcept {
+double
+distToPolyline(const math::Vec2& point, std::span<const math::Vec2> polyline) noexcept
+{
   double minDist = std::numeric_limits<double>::max();
   for (std::size_t i = 0; i + 1 < polyline.size(); ++i) {
     const auto& segA = polyline[i];
@@ -37,7 +38,9 @@ double distToPolyline(const math::Vec2& point,
 }
 
 // Golden section minimization of |phi(t)| on [0,1]. Fallback when no sign change.
-double goldenSectionMin(const auto& absPhi) noexcept {
+double
+goldenSectionMin(const auto& absPhi) noexcept
+{
   constexpr double INV_PHI = 0.6180339887498949; // 1/golden ratio
   double lo = 0.0;
   double hi = 1.0;
@@ -68,10 +71,12 @@ double goldenSectionMin(const auto& absPhi) noexcept {
 }
 
 // Bisection (with golden-section fallback) to find equidistant point.
-double bisectEquidistant(const math::Vec2& hubPt,
-                         const math::Vec2& shroudPt,
-                         std::span<const math::Vec2> hubPolyline,
-                         std::span<const math::Vec2> shroudPolyline) noexcept {
+double
+bisectEquidistant(const math::Vec2& hubPt,
+                  const math::Vec2& shroudPt,
+                  std::span<const math::Vec2> hubPolyline,
+                  std::span<const math::Vec2> shroudPolyline) noexcept
+{
   auto phi = [&](double param) -> double {
     math::Vec2 point = (1.0 - param) * hubPt + param * shroudPt;
     return distToPolyline(point, hubPolyline) - distToPolyline(point, shroudPolyline);
@@ -106,7 +111,9 @@ double bisectEquidistant(const math::Vec2& hubPt,
 // Compute physical gradient of psi at grid node (row, col) using the Jacobian
 // inverse mapping from logical (i,j) to physical (z,r) space.
 // Central finite differences in the interior, one-sided at boundaries.
-math::Vec2 psiGradientDir(const FlowSolution& sol, int row, int col) noexcept {
+math::Vec2
+psiGradientDir(const FlowSolution& sol, int row, int col) noexcept
+{
   const auto& grid = sol.grid;
 
   auto nodeIdx = [&](int i, int j) -> std::size_t {
@@ -166,9 +173,11 @@ math::Vec2 psiGradientDir(const FlowSolution& sol, int row, int col) noexcept {
 // std::nullopt — the caller must then fall back to a known-good endpoint.
 // At boundary rows the gradient direction can slightly miss the polyline
 // end, so robust failure reporting is required.
-std::optional<math::Vec2> raySegmentHit(const math::Vec2& point,
-                                        const math::Vec2& dir,
-                                        std::span<const math::Vec2> poly) noexcept {
+std::optional<math::Vec2>
+raySegmentHit(const math::Vec2& point,
+              const math::Vec2& dir,
+              std::span<const math::Vec2> poly) noexcept
+{
   double bestDist = std::numeric_limits<double>::max();
   std::optional<math::Vec2> bestPt;
   for (std::size_t i = 0; i + 1 < poly.size(); ++i) {
@@ -200,24 +209,27 @@ std::optional<math::Vec2> raySegmentHit(const math::Vec2& point,
 // tilted gradient runs past the polyline's open end), fall back to the
 // supplied hub/shroud anchor points — they are guaranteed to be on the
 // polylines since the grid is built from them.
-double chordAlongDir(const math::Vec2& point,
-                     const math::Vec2& dir,
-                     std::span<const math::Vec2> hubPolyline,
-                     std::span<const math::Vec2> shroudPolyline,
-                     const math::Vec2& hubAnchor,
-                     const math::Vec2& shroudAnchor) noexcept {
+double
+chordAlongDir(const math::Vec2& point,
+              const math::Vec2& dir,
+              std::span<const math::Vec2> hubPolyline,
+              std::span<const math::Vec2> shroudPolyline,
+              const math::Vec2& hubAnchor,
+              const math::Vec2& shroudAnchor) noexcept
+{
   math::Vec2 hitHub = raySegmentHit(point, dir, hubPolyline).value_or(hubAnchor);
-  math::Vec2 hitShroud =
-      raySegmentHit(point, dir, shroudPolyline).value_or(shroudAnchor);
+  math::Vec2 hitShroud = raySegmentHit(point, dir, shroudPolyline).value_or(shroudAnchor);
   return (hitShroud - hitHub).norm();
 }
 
 } // namespace
 
-Result<AreaProfile> computeAreaProfile(const FlowSolution& sol,
-                                       std::span<const math::Vec2> hubPolyline,
-                                       std::span<const math::Vec2> shroudPolyline,
-                                       const PumpParams& params) noexcept {
+Result<AreaProfile>
+computeAreaProfile(const FlowSolution& sol,
+                   std::span<const math::Vec2> hubPolyline,
+                   std::span<const math::Vec2> shroudPolyline,
+                   const PumpParams& params) noexcept
+{
   const auto& grid = sol.grid;
   if (grid.nh < 2 || grid.m < 3) {
     return std::unexpected(CoreError::GridBuildFailed);
@@ -245,11 +257,9 @@ Result<AreaProfile> computeAreaProfile(const FlowSolution& sol,
     // Chord along psi gradient direction, evaluated at the grid column
     // nearest to the equidistant midpoint (matches Python reference which
     // uses the grid node closest to the midline point).
-    int col = std::clamp(static_cast<int>(std::round(param * (grid.m - 1))), 0,
-                         grid.m - 1);
+    int col = std::clamp(static_cast<int>(std::round(param * (grid.m - 1))), 0, grid.m - 1);
     math::Vec2 gradDir = psiGradientDir(sol, row, col);
-    double chord = chordAlongDir(midPt, gradDir, hubPolyline, shroudPolyline,
-                                 hubPt, shrPt);
+    double chord = chordAlongDir(midPt, gradDir, hubPolyline, shroudPolyline, hubPt, shrPt);
     profile.chordLengths[rowU] = chord;
 
     // Area = 2*pi*r*chord
@@ -261,7 +271,7 @@ Result<AreaProfile> computeAreaProfile(const FlowSolution& sol,
   profile.arcLengths.resize(numRows, 0.0);
   for (std::size_t i = 1; i < numRows; ++i) {
     profile.arcLengths[i] =
-        profile.arcLengths[i - 1] + (profile.midPoints[i] - profile.midPoints[i - 1]).norm();
+      profile.arcLengths[i - 1] + (profile.midPoints[i] - profile.midPoints[i - 1]).norm();
   }
 
   // Reference areas

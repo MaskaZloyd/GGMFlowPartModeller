@@ -16,7 +16,9 @@ namespace {
 // Endpoints are preserved so streamlines still start/end on the domain
 // boundary. Two iterations quadruples point count and smooths visible
 // staircase artefacts that marching squares leaves on the quad grid.
-void chaikinSmooth(std::vector<math::Vec2>& poly, int iterations) {
+void
+chaikinSmooth(std::vector<math::Vec2>& poly, int iterations)
+{
   if (poly.size() < 3 || iterations <= 0) {
     return;
   }
@@ -42,16 +44,20 @@ void chaikinSmooth(std::vector<math::Vec2>& poly, int iterations) {
 //   - j-edge: between node (i, j) and (i, j+1). Ranges i in [0, nh-1],
 //     j in [0, m-2].
 // We encode as a 64-bit integer so it hashes cheaply.
-constexpr std::uint64_t edgeIdI(int i, int j, int m) noexcept {
+constexpr std::uint64_t
+edgeIdI(int i, int j, int m) noexcept
+{
   return (static_cast<std::uint64_t>(i) * static_cast<std::uint64_t>(m) +
           static_cast<std::uint64_t>(j)) *
-             2ULL +
+           2ULL +
          0ULL;
 }
-constexpr std::uint64_t edgeIdJ(int i, int j, int m) noexcept {
+constexpr std::uint64_t
+edgeIdJ(int i, int j, int m) noexcept
+{
   return (static_cast<std::uint64_t>(i) * static_cast<std::uint64_t>(m) +
           static_cast<std::uint64_t>(j)) *
-             2ULL +
+           2ULL +
          1ULL;
 }
 
@@ -59,8 +65,9 @@ constexpr std::uint64_t edgeIdJ(int i, int j, int m) noexcept {
 // field values are va, vb and we target level L. Returns pa + t*(pb-pa)
 // with t = (L - va)/(vb - va), clamped to [0, 1] to avoid NaN on equal
 // endpoints.
-math::Vec2 interpolate(const math::Vec2& pa, const math::Vec2& pb, double va,
-                       double vb, double level) noexcept {
+math::Vec2
+interpolate(const math::Vec2& pa, const math::Vec2& pb, double va, double vb, double level) noexcept
+{
   double denom = vb - va;
   double t = 0.5;
   if (std::abs(denom) > 1e-15) {
@@ -75,41 +82,50 @@ math::Vec2 interpolate(const math::Vec2& pa, const math::Vec2& pb, double va,
 //   1 = right  (c10 -> c11), identified as j-edge (i+1, j)
 //   2 = top    (c01 -> c11), identified as i-edge (i, j+1)
 //   3 = left   (c00 -> c01), identified as j-edge (i, j)
-enum : int { EdgeBottom = 0, EdgeRight = 1, EdgeTop = 2, EdgeLeft = 3 };
+enum : int
+{
+  EdgeBottom = 0,
+  EdgeRight = 1,
+  EdgeTop = 2,
+  EdgeLeft = 3
+};
 
 // For each of the 16 marching-squares cases, record which edge pairs form
 // segments. Index 0..15 = bit(c00) + 2*bit(c10) + 4*bit(c11) + 8*bit(c01).
 // Each case emits 0, 1, or 2 segments. Ambiguous saddle cases (5, 10) emit
 // two segments using the "separate the two highs" convention.
-struct Segments {
+struct Segments
+{
   int count;
   std::array<std::array<int, 2>, 2> edges;
 };
 
 constexpr std::array<Segments, 16> SEGMENT_TABLE = {{
-    /* 0  0000 */ {0, {{{-1, -1}, {-1, -1}}}},
-    /* 1  0001 */ {1, {{{EdgeLeft, EdgeBottom}, {-1, -1}}}},
-    /* 2  0010 */ {1, {{{EdgeBottom, EdgeRight}, {-1, -1}}}},
-    /* 3  0011 */ {1, {{{EdgeLeft, EdgeRight}, {-1, -1}}}},
-    /* 4  0100 */ {1, {{{EdgeRight, EdgeTop}, {-1, -1}}}},
-    /* 5  0101 */ {2, {{{EdgeLeft, EdgeBottom}, {EdgeRight, EdgeTop}}}},
-    /* 6  0110 */ {1, {{{EdgeBottom, EdgeTop}, {-1, -1}}}},
-    /* 7  0111 */ {1, {{{EdgeLeft, EdgeTop}, {-1, -1}}}},
-    /* 8  1000 */ {1, {{{EdgeTop, EdgeLeft}, {-1, -1}}}},
-    /* 9  1001 */ {1, {{{EdgeTop, EdgeBottom}, {-1, -1}}}},
-    /* 10 1010 */ {2, {{{EdgeBottom, EdgeRight}, {EdgeTop, EdgeLeft}}}},
-    /* 11 1011 */ {1, {{{EdgeTop, EdgeRight}, {-1, -1}}}},
-    /* 12 1100 */ {1, {{{EdgeRight, EdgeLeft}, {-1, -1}}}},
-    /* 13 1101 */ {1, {{{EdgeBottom, EdgeRight}, {-1, -1}}}},
-    /* 14 1110 */ {1, {{{EdgeLeft, EdgeBottom}, {-1, -1}}}},
-    /* 15 1111 */ {0, {{{-1, -1}, {-1, -1}}}},
+  /* 0  0000 */ {0, {{{-1, -1}, {-1, -1}}}},
+  /* 1  0001 */ {1, {{{EdgeLeft, EdgeBottom}, {-1, -1}}}},
+  /* 2  0010 */ {1, {{{EdgeBottom, EdgeRight}, {-1, -1}}}},
+  /* 3  0011 */ {1, {{{EdgeLeft, EdgeRight}, {-1, -1}}}},
+  /* 4  0100 */ {1, {{{EdgeRight, EdgeTop}, {-1, -1}}}},
+  /* 5  0101 */ {2, {{{EdgeLeft, EdgeBottom}, {EdgeRight, EdgeTop}}}},
+  /* 6  0110 */ {1, {{{EdgeBottom, EdgeTop}, {-1, -1}}}},
+  /* 7  0111 */ {1, {{{EdgeLeft, EdgeTop}, {-1, -1}}}},
+  /* 8  1000 */ {1, {{{EdgeTop, EdgeLeft}, {-1, -1}}}},
+  /* 9  1001 */ {1, {{{EdgeTop, EdgeBottom}, {-1, -1}}}},
+  /* 10 1010 */ {2, {{{EdgeBottom, EdgeRight}, {EdgeTop, EdgeLeft}}}},
+  /* 11 1011 */ {1, {{{EdgeTop, EdgeRight}, {-1, -1}}}},
+  /* 12 1100 */ {1, {{{EdgeRight, EdgeLeft}, {-1, -1}}}},
+  /* 13 1101 */ {1, {{{EdgeBottom, EdgeRight}, {-1, -1}}}},
+  /* 14 1110 */ {1, {{{EdgeLeft, EdgeBottom}, {-1, -1}}}},
+  /* 15 1111 */ {0, {{{-1, -1}, {-1, -1}}}},
 }};
 
-struct EdgeKey {
+struct EdgeKey
+{
   std::uint64_t id;
 };
 
-struct SegmentRecord {
+struct SegmentRecord
+{
   std::uint64_t edgeA;
   std::uint64_t edgeB;
 };
@@ -118,10 +134,10 @@ struct SegmentRecord {
 // vertices = edge ids, edges = segments, degree <= 2 per vertex.
 std::vector<std::vector<math::Vec2>>
 stitch(const std::vector<SegmentRecord>& segments,
-       const std::unordered_map<std::uint64_t, math::Vec2>& edgePoints) {
+       const std::unordered_map<std::uint64_t, math::Vec2>& edgePoints)
+{
   // adjacency: vertex -> list of (other vertex, segment index)
-  std::unordered_map<std::uint64_t, std::vector<std::pair<std::uint64_t, std::size_t>>>
-      adjacency;
+  std::unordered_map<std::uint64_t, std::vector<std::pair<std::uint64_t, std::size_t>>> adjacency;
   adjacency.reserve(segments.size() * 2);
   for (std::size_t s = 0; s < segments.size(); ++s) {
     adjacency[segments[s].edgeA].emplace_back(segments[s].edgeB, s);
@@ -242,7 +258,9 @@ stitch(const std::vector<SegmentRecord>& segments,
 
 } // namespace
 
-std::vector<double> equidistantLevels(int n) noexcept {
+std::vector<double>
+equidistantLevels(int n) noexcept
+{
   std::vector<double> levels;
   if (n <= 0) {
     return levels;
@@ -255,8 +273,9 @@ std::vector<double> equidistantLevels(int n) noexcept {
   return levels;
 }
 
-std::vector<Streamline> extractStreamlines(const FlowSolution& sol,
-                                           const std::vector<double>& psiLevels) noexcept {
+std::vector<Streamline>
+extractStreamlines(const FlowSolution& sol, const std::vector<double>& psiLevels) noexcept
+{
   const auto& grid = sol.grid;
   std::vector<Streamline> streamlines;
   streamlines.reserve(psiLevels.size());
@@ -267,9 +286,7 @@ std::vector<Streamline> extractStreamlines(const FlowSolution& sol,
     return streamlines;
   }
 
-  auto nodeIdx = [&](int i, int j) -> std::size_t {
-    return static_cast<std::size_t>(i * mm + j);
-  };
+  auto nodeIdx = [&](int i, int j) -> std::size_t { return static_cast<std::size_t>(i * mm + j); };
 
   for (double level : psiLevels) {
     std::unordered_map<std::uint64_t, math::Vec2> edgePoints;
@@ -315,9 +332,11 @@ std::vector<Streamline> extractStreamlines(const FlowSolution& sol,
           break;
       }
       if (edgePoints.find(id) == edgePoints.end()) {
-        edgePoints[id] =
-            interpolate(grid.nodes[nodeIdx(ia, ja)], grid.nodes[nodeIdx(ib, jb)],
-                        sol.psi[nodeIdx(ia, ja)], sol.psi[nodeIdx(ib, jb)], level);
+        edgePoints[id] = interpolate(grid.nodes[nodeIdx(ia, ja)],
+                                     grid.nodes[nodeIdx(ib, jb)],
+                                     sol.psi[nodeIdx(ia, ja)],
+                                     sol.psi[nodeIdx(ib, jb)],
+                                     level);
       }
       return id;
     };
@@ -349,9 +368,10 @@ std::vector<Streamline> extractStreamlines(const FlowSolution& sol,
     Streamline line;
     line.psiLevel = level;
     if (!polylines.empty()) {
-      auto longest = std::max_element(
-          polylines.begin(), polylines.end(),
-          [](const auto& a, const auto& b) { return a.size() < b.size(); });
+      auto longest =
+        std::max_element(polylines.begin(), polylines.end(), [](const auto& a, const auto& b) {
+          return a.size() < b.size();
+        });
       line.points = std::move(*longest);
       // Smooth away the quad-cell staircase left by marching squares.
       chaikinSmooth(line.points, /*iterations=*/2);

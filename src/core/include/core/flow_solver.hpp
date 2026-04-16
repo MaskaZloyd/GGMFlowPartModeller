@@ -14,7 +14,8 @@ namespace ggm::core {
 // Called between pipeline stages. May also be called inside FEM assembly.
 using CancelPredicate = std::function<bool()>;
 
-class FlowSolver {
+class FlowSolver
+{
 public:
   FlowSolver() = default;
 

@@ -1,10 +1,10 @@
 #include "core/logging.hpp"
 
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-
 #include <array>
 #include <mutex>
+
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace ggm::logging {
 
@@ -18,11 +18,12 @@ std::shared_ptr<GuiRingSink> g_guiSink;
 
 } // namespace
 
-void init() {
+void
+init()
+{
   std::call_once(g_initFlag, [] {
     auto console = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
-    auto file =
-        std::make_shared<spdlog::sinks::basic_file_sink_mt>("ggm.log", /*truncate=*/true);
+    auto file = std::make_shared<spdlog::sinks::basic_file_sink_mt>("ggm.log", /*truncate=*/true);
     g_guiSink = std::make_shared<GuiRingSink>(GUI_RING_CAPACITY);
 
     for (auto& sink : std::array<spdlog::sink_ptr, 3>{console, file, g_guiSink}) {
@@ -40,7 +41,9 @@ void init() {
   });
 }
 
-std::shared_ptr<GuiRingSink> guiSink() {
+std::shared_ptr<GuiRingSink>
+guiSink()
+{
   return g_guiSink;
 }
 

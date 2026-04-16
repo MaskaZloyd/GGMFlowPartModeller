@@ -26,7 +26,9 @@ using ggm::math::Vec2;
 
 namespace {
 
-void benchNurbs() {
+void
+benchNurbs()
+{
   const Vec2 center{0.0, 0.0};
   constexpr double radius = 1.0;
   const std::array<ArcBezier, 2> segs = {
@@ -43,12 +45,15 @@ void benchNurbs() {
                 static_cast<std::size_t>(pts.back().y() * 1e6);
   }
   const auto elapsed = std::chrono::steady_clock::now() - start;
-  const auto elapsedMs =
-    std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
-  std::printf("nurbs: %ld ms (checksum=%zu)\n", static_cast<long>(elapsedMs), checksum); // NOLINT(cppcoreguidelines-pro-type-vararg)
+  const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+  std::printf("nurbs: %ld ms (checksum=%zu)\n",
+              static_cast<long>(elapsedMs),
+              checksum); // NOLINT(cppcoreguidelines-pro-type-vararg)
 }
 
-void benchSolver() {
+void
+benchSolver()
+{
   ggm::core::PumpParams params;
   const auto geom = ggm::core::buildGeometry(params);
   if (!geom) {
@@ -70,12 +75,15 @@ void benchSolver() {
     }
   }
   const auto elapsed = std::chrono::steady_clock::now() - start;
-  const auto elapsedMs =
-    std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
-  std::printf("solver: %ld ms (checksum=%zu)\n", static_cast<long>(elapsedMs), checksum); // NOLINT(cppcoreguidelines-pro-type-vararg)
+  const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+  std::printf("solver: %ld ms (checksum=%zu)\n",
+              static_cast<long>(elapsedMs),
+              checksum); // NOLINT(cppcoreguidelines-pro-type-vararg)
 }
 
-void benchFlatConvert() {
+void
+benchFlatConvert()
+{
   std::vector<Vec2> points;
   points.reserve(1500);
   for (int i = 0; i < 1500; ++i) {
@@ -95,14 +103,17 @@ void benchFlatConvert() {
     checksum += static_cast<double>(flat.size());
   }
   const auto elapsed = std::chrono::steady_clock::now() - start;
-  const auto elapsedMs =
-    std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
-  std::printf("flat:   %ld ms (checksum=%.0f)\n", static_cast<long>(elapsedMs), checksum); // NOLINT(cppcoreguidelines-pro-type-vararg)
+  const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+  std::printf("flat:   %ld ms (checksum=%.0f)\n",
+              static_cast<long>(elapsedMs),
+              checksum); // NOLINT(cppcoreguidelines-pro-type-vararg)
 }
 
 } // namespace
 
-int main() {
+int
+main()
+{
   ggm::logging::init();
   benchNurbs();
   benchSolver();

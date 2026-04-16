@@ -1,6 +1,3 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
-
 #include "math/bezier.hpp"
 #include "math/nurbs.hpp"
 
@@ -8,9 +5,12 @@
 #include <cmath>
 #include <numbers>
 
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
+
 using namespace ggm::math;
-using Catch::Matchers::WithinRel;
 using Catch::Matchers::WithinAbs;
+using Catch::Matchers::WithinRel;
 
 // Build a quarter-circle NURBS from a single arc segment and verify that all
 // evaluated points lie on the unit circle (exact rational conic property).

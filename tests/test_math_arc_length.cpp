@@ -1,15 +1,15 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
-
 #include "math/arc_length.hpp"
 #include "math/types.hpp"
 
 #include <numbers>
 #include <vector>
 
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
+
 using namespace ggm::math;
-using Catch::Matchers::WithinRel;
 using Catch::Matchers::WithinAbs;
+using Catch::Matchers::WithinRel;
 
 TEST_CASE("resampleArcLength: empty input returns empty output", "[arc_length]")
 {
@@ -53,8 +53,8 @@ TEST_CASE("resampleArcLength: equal spacing on straight line", "[arc_length]")
   REQUIRE(static_cast<int>(result.size()) == n);
   constexpr double expectedStep = 10.0 / (n - 1);
   for (int i = 1; i < n; ++i) {
-    const double dist = (result[static_cast<std::size_t>(i)] -
-                         result[static_cast<std::size_t>(i - 1)]).norm();
+    const double dist =
+      (result[static_cast<std::size_t>(i)] - result[static_cast<std::size_t>(i - 1)]).norm();
     REQUIRE_THAT(dist, WithinRel(expectedStep, 1e-10));
   }
 }
