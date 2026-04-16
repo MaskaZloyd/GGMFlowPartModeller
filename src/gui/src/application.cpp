@@ -28,7 +28,10 @@ std::expected<Application, std::string> Application::create() noexcept {
 
   Application app(std::move(*window));
 
-  app.model_.rebuildGeometry();
+  if (auto rebuilt = app.model_.rebuildGeometry(); !rebuilt) {
+    logging::gui()->warn("Ошибка построения геометрии: {}",
+                         core::toString(rebuilt.error()));
+  }
   logging::gui()->info("Приложение запущено");
 
   if (app.model_.geometryValid()) {
@@ -83,7 +86,10 @@ int Application::run() noexcept {
     bool liveChanged = !(panelResult.liveParams == model_.params());
     if (liveChanged) {
       model_.setParams(panelResult.liveParams);
-      model_.rebuildGeometry();
+      if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
+        logging::gui()->warn("Ошибка построения геометрии: {}",
+                             core::toString(rebuilt.error()));
+      }
     }
 
     if (panelResult.finishedEdit) {
@@ -140,7 +146,10 @@ void Application::handleUndo() noexcept {
   }
   const auto& params = undoStack_.undoParams();
   model_.setParams(params);
-  model_.rebuildGeometry();
+  if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
+    logging::gui()->warn("Ошибка построения геометрии: {}",
+                         core::toString(rebuilt.error()));
+  }
   undoStack_.undo();
   logging::gui()->info("Undo");
 }
@@ -151,7 +160,10 @@ void Application::handleRedo() noexcept {
   }
   const auto& params = undoStack_.redoParams();
   model_.setParams(params);
-  model_.rebuildGeometry();
+  if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
+    logging::gui()->warn("Ошибка построения геометрии: {}",
+                         core::toString(rebuilt.error()));
+  }
   undoStack_.redo();
   logging::gui()->info("Redo");
 }
@@ -180,7 +192,10 @@ void Application::handleOpen() noexcept {
   if (result) {
     auto oldParams = model_.params();
     model_.setParams(*result);
-    model_.rebuildGeometry();
+    if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
+      logging::gui()->warn("Ошибка построения геометрии: {}",
+                           core::toString(rebuilt.error()));
+    }
     undoStack_.push(EditCommand{
         .before = oldParams,
         .after = *result,
@@ -197,7 +212,10 @@ void Application::handleNew() noexcept {
   auto oldParams = model_.params();
   core::PumpParams defaultParams;
   model_.setParams(defaultParams);
-  model_.rebuildGeometry();
+  if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
+    logging::gui()->warn("Ошибка построения геометрии: {}",
+                         core::toString(rebuilt.error()));
+  }
   undoStack_.push(EditCommand{
       .before = oldParams,
       .after = defaultParams,

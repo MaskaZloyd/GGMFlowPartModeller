@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/computation_settings.hpp"
+#include "core/error.hpp"
 #include "core/geometry.hpp"
 #include "core/pump_params.hpp"
 
@@ -24,7 +25,7 @@ public:
   void setCompSettings(ComputationSettings settings) noexcept { compSettings_ = settings; }
 
   // Rebuild geometry (fast — NURBS eval only). Safe to call on UI thread.
-  void rebuildGeometry() noexcept;
+  [[nodiscard]] Result<void> rebuildGeometry() noexcept;
 
 private:
   PumpParams params_;

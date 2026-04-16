@@ -11,15 +11,16 @@ PumpParams PumpModel::setParams(PumpParams newParams) noexcept {
   return old;
 }
 
-void PumpModel::rebuildGeometry() noexcept {
+Result<void> PumpModel::rebuildGeometry() noexcept {
   auto result = buildGeometry(params_);
-  if (result) {
-    geometry_ = std::move(*result);
-    geometryValid_ = true;
-  } else {
+  if (!result) {
     geometry_ = {};
     geometryValid_ = false;
+    return std::unexpected(result.error());
   }
+  geometry_ = std::move(*result);
+  geometryValid_ = true;
+  return {};
 }
 
 } // namespace ggm::core
