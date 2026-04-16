@@ -8,6 +8,7 @@
 #include "math/arc_length.hpp"
 
 #include <cstddef>
+#include <numbers>
 #include <vector>
 
 namespace ggm::core {
@@ -192,7 +193,7 @@ Result<FlowResults> FlowSolver::solve(const MeridionalGeometry& geom,
       ap.chordLengths[keep] = ap.chordLengths[keep - 1];
       ap.flowAreas.resize(keep + 1);
       // Recompute the outlet area cleanly: 2*pi*r*chord with r=rMax.
-      ap.flowAreas[keep] = 2.0 * 3.14159265358979323846 * rMax * ap.chordLengths[keep];
+      ap.flowAreas[keep] = 2.0 * std::numbers::pi * rMax * ap.chordLengths[keep];
       ap.arcLengths.resize(keep + 1);
       ap.arcLengths[keep] =
           ap.arcLengths[keep - 1] + (clipped - prev).norm();
