@@ -15,6 +15,7 @@ enum class CoreError {
   GridBuildFailed,
   SolverFailed,
   Cancelled,
+  RenderFailed,
 };
 
 // Human-readable error description.
@@ -38,6 +39,8 @@ enum class CoreError {
       return "FEM solver failed";
     case CoreError::Cancelled:
       return "Cancelled";
+    case CoreError::RenderFailed:
+      return "Render target creation failed";
   }
   return "Unknown error";
 }

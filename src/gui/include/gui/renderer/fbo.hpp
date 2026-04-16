@@ -1,7 +1,7 @@
 #pragma once
 
-#include <expected>
-#include <string>
+#include "core/error.hpp"
+
 #include <utility>
 
 namespace ggm::gui {
@@ -17,7 +17,7 @@ public:
   Fbo& operator=(Fbo&& other) noexcept;
 
   // (Re)allocate if size changed. No-op if size matches.
-  [[nodiscard]] std::expected<void, std::string> resize(int width, int height) noexcept;
+  [[nodiscard]] core::Result<void> resize(int width, int height) noexcept;
 
   // Bind the multisampled FBO for rendering.
   void bind() noexcept;

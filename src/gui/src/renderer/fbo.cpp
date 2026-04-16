@@ -33,7 +33,7 @@ Fbo& Fbo::operator=(Fbo&& other) noexcept {
   return *this;
 }
 
-std::expected<void, std::string> Fbo::resize(int width, int height) noexcept {
+core::Result<void> Fbo::resize(int width, int height) noexcept {
   if (width == width_ && height == height_ && msFbo_ != 0) {
     return {};
   }
@@ -76,7 +76,7 @@ std::expected<void, std::string> Fbo::resize(int width, int height) noexcept {
   if (msStatus != GL_FRAMEBUFFER_COMPLETE) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     destroy();
-    return std::unexpected(std::string("Multisampled FBO is not complete"));
+    return std::unexpected(core::CoreError::RenderFailed);
   }
 
   // --- Resolve FBO (single-sample, texture-backed, for ImGui::Image) ---
@@ -95,7 +95,7 @@ std::expected<void, std::string> Fbo::resize(int width, int height) noexcept {
 
   if (resolveStatus != GL_FRAMEBUFFER_COMPLETE) {
     destroy();
-    return std::unexpected(std::string("Resolve FBO is not complete"));
+    return std::unexpected(core::CoreError::RenderFailed);
   }
 
   return {};
