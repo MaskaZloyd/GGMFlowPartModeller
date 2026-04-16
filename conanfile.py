@@ -15,6 +15,9 @@ class GGMFlowPartModellerConan(ConanFile):
         self.requires("onetbb/2021.12.0")
         self.requires("spdlog/1.14.1")
 
+    def build_requirements(self):
+        self.test_requires("catch2/3.14.0")
+
     def configure(self):
         self.options["onetbb"].shared = False
         self.options["hwloc"].shared = True

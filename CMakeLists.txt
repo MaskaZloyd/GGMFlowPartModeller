@@ -60,6 +60,7 @@ find_package(spdlog REQUIRED)
 add_subdirectory(src)
 
 if(BUILD_TESTS)
+    find_package(Catch2 REQUIRED)
     enable_testing()
     add_subdirectory(tests)
 endif()
