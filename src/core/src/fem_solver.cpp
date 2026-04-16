@@ -1,7 +1,5 @@
 #include "core/fem_solver.hpp"
 
-#include "core/logging.hpp"
-
 #include <Eigen/Sparse>
 #include <Eigen/SparseLU>
 #include <tbb/enumerable_thread_specific.h>
@@ -9,7 +7,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <sstream>
 #include <vector>
 
 namespace ggm::core {
@@ -188,32 +185,6 @@ Result<FlowSolution> solveFem(StripGrid grid) noexcept {
   // Copy to std::vector
   std::vector<double> psi(static_cast<std::size_t>(totalNodes));
   Eigen::Map<Eigen::VectorXd>(psi.data(), totalNodes) = psiVec;
-
-  // Diagnostic: dump psi along the transverse chord at three rows:
-  // inlet area, middle, and outlet area. For a correct Stokes stream
-  // function in a locally-annular region this should track
-  // (r^2 - r_h^2) / (r_s^2 - r_h^2). If it looks logarithmic (slow near hub,
-  // fast near shroud) the PDE being discretised is wrong.
-  if (grid.nh > 2 && grid.m >= 5) {
-    auto dumpRow = [&](int row) {
-      std::ostringstream line;
-      line.precision(3);
-      line << std::fixed;
-      int step = std::max(1, grid.m / 8);
-      for (int j = 0; j < grid.m; j += step) {
-        auto idx = static_cast<std::size_t>(row * grid.m + j);
-        line << " j=" << j << " r=" << grid.nodes[idx].y()
-             << " psi=" << psi[idx] << ";";
-      }
-      auto last = static_cast<std::size_t>(row * grid.m + grid.m - 1);
-      line << " j=" << (grid.m - 1) << " r=" << grid.nodes[last].y()
-           << " psi=" << psi[last] << ";";
-      logging::core()->debug("psi row {}:{}", row, line.str());
-    };
-    dumpRow(grid.nh / 10);
-    dumpRow(grid.nh / 2);
-    dumpRow(grid.nh - 1 - grid.nh / 10);
-  }
 
   return FlowSolution{.grid = std::move(grid), .psi = std::move(psi)};
 }
