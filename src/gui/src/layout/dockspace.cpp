@@ -1,5 +1,7 @@
 #include "gui/layout/dockspace.hpp"
 
+#include "gui/solver_status_display.hpp"
+
 #include <imgui.h>
 
 #include <cstdio>
@@ -97,32 +99,6 @@ DockspaceActions buildDockspace(bool canUndo, bool canRedo) noexcept {
   return actions;
 }
 
-namespace {
-
-ImVec4 statusColor(core::SolverStatus st) noexcept {
-  switch (st) {
-    case core::SolverStatus::Idle:      return {0.45F, 0.48F, 0.54F, 1.0F};
-    case core::SolverStatus::Running:   return {0.85F, 0.58F, 0.10F, 1.0F};
-    case core::SolverStatus::Success:   return {0.12F, 0.70F, 0.30F, 1.0F};
-    case core::SolverStatus::Failed:    return {0.85F, 0.22F, 0.18F, 1.0F};
-    case core::SolverStatus::Cancelled: return {0.55F, 0.48F, 0.22F, 1.0F};
-  }
-  return {0.2F, 0.2F, 0.2F, 1.0F};
-}
-
-const char* statusLabel(core::SolverStatus st) noexcept {
-  switch (st) {
-    case core::SolverStatus::Idle:      return "ожидание";
-    case core::SolverStatus::Running:   return "расчёт…";
-    case core::SolverStatus::Success:   return "готово";
-    case core::SolverStatus::Failed:    return "ошибка";
-    case core::SolverStatus::Cancelled: return "отменено";
-  }
-  return "?";
-}
-
-} // namespace
-
 void drawStatusBar(std::string_view fileName,
                    core::SolverStatus solverStatus,
                    std::chrono::milliseconds lastDuration) noexcept {
@@ -155,7 +131,8 @@ void drawStatusBar(std::string_view fileName,
   ImGui::SameLine();
   ImGui::TextDisabled("Статус:");
   ImGui::SameLine();
-  ImGui::TextColored(statusColor(solverStatus), "%s", statusLabel(solverStatus));
+  const auto display = solverStatusBar(solverStatus);
+  ImGui::TextColored(display.color, "%s", display.label);
 
   if (lastDuration.count() > 0) {
     ImGui::SameLine();

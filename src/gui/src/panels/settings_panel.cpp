@@ -1,5 +1,7 @@
 #include "gui/panels/settings_panel.hpp"
 
+#include "gui/solver_status_display.hpp"
+
 #include <imgui.h>
 
 #include <cmath>
@@ -8,30 +10,9 @@ namespace ggm::gui {
 
 namespace {
 
-struct StatusDisplay {
-  const char* label;
-  ImVec4 color;
-};
-
-StatusDisplay statusDisplay(core::SolverStatus status) noexcept {
-  switch (status) {
-    case core::SolverStatus::Idle:
-      return {"ожидание", ImVec4(0.65F, 0.65F, 0.65F, 1.0F)};
-    case core::SolverStatus::Running:
-      return {"расчёт...", ImVec4(1.0F, 0.72F, 0.15F, 1.0F)};
-    case core::SolverStatus::Success:
-      return {"готово", ImVec4(0.25F, 0.85F, 0.35F, 1.0F)};
-    case core::SolverStatus::Failed:
-      return {"ошибка", ImVec4(0.95F, 0.30F, 0.25F, 1.0F)};
-    case core::SolverStatus::Cancelled:
-      return {"отменено", ImVec4(0.65F, 0.50F, 0.20F, 1.0F)};
-  }
-  return {"?", ImVec4(1, 1, 1, 1)};
-}
-
 void drawStatusIndicator(core::SolverStatus status,
                          std::chrono::milliseconds lastDuration) noexcept {
-  auto sd = statusDisplay(status);
+  const auto display = solverStatusPanel(status);
 
   // Colored dot + text
   ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -42,11 +23,11 @@ void drawStatusIndicator(core::SolverStatus status,
                    cursor.y + (lineHeight * 0.5F));
 
   // Pulsating animation for Running state
-  ImU32 dotColor = ImGui::ColorConvertFloat4ToU32(sd.color);
+  ImU32 dotColor = ImGui::ColorConvertFloat4ToU32(display.color);
   if (status == core::SolverStatus::Running) {
     float pulse =
         0.5F + 0.5F * std::sin(static_cast<float>(ImGui::GetTime()) * 4.0F);
-    ImVec4 pulsed = sd.color;
+    ImVec4 pulsed = display.color;
     pulsed.w = 0.5F + 0.5F * pulse;
     dotColor = ImGui::ColorConvertFloat4ToU32(pulsed);
   }
@@ -54,7 +35,7 @@ void drawStatusIndicator(core::SolverStatus status,
   drawList->AddCircleFilled(dotCenter, dotRadius, dotColor, 16);
   ImGui::Dummy(ImVec2(dotRadius * 2.0F + 4.0F, lineHeight));
   ImGui::SameLine();
-  ImGui::TextColored(sd.color, "%s", sd.label);
+  ImGui::TextColored(display.color, "%s", display.label);
 
   if (lastDuration.count() > 0 && status == core::SolverStatus::Success) {
     ImGui::SameLine();
