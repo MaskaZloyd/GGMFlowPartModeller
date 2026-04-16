@@ -32,7 +32,6 @@ public:
 private:
   explicit Application(AppWindow window);
 
-  void processEdit(EditCommand cmd) noexcept;
   void handleUndo() noexcept;
   void handleRedo() noexcept;
   void handleSave() noexcept;

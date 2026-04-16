@@ -134,16 +134,6 @@ int Application::run() noexcept {
   return 0;
 }
 
-void Application::processEdit(EditCommand cmd) noexcept {
-  model_.setParams(cmd.after);
-  model_.rebuildGeometry();
-  undoStack_.push(std::move(cmd));
-
-  if (!model_.geometryValid()) {
-    logging::gui()->warn("Геометрия не построена с текущими параметрами");
-  }
-}
-
 void Application::handleUndo() noexcept {
   if (!undoStack_.canUndo()) {
     return;
