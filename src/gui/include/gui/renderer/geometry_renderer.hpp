@@ -4,6 +4,8 @@
 #include "core/geometry.hpp"
 #include "gui/renderer/render_settings.hpp"
 
+#include <vector>
+
 namespace ggm::gui {
 
 // Visible world bounds after the aspect correction. Panels use this to draw
@@ -48,6 +50,7 @@ private:
   int viewportUniformLocation_ = -1;
   int colorUniformLocation_ = -1;
   float maxLineWidth_ = 1.0F;
+  std::vector<float> scratchVertices_;
 };
 
 } // namespace ggm::gui

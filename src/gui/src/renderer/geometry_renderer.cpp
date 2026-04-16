@@ -185,13 +185,15 @@ public:
               const GLuint vbo,
               const GLint viewportUniformLocation,
               const GLint colorUniformLocation,
-              const float maxLineWidth) noexcept
-    : shaderProgram_(shaderProgram),
-      vao_(vao),
-      vbo_(vbo),
-      viewportUniformLocation_(viewportUniformLocation),
-      colorUniformLocation_(colorUniformLocation),
-      maxLineWidth_(maxLineWidth)
+              const float maxLineWidth,
+              std::vector<float>& scratchVertices) noexcept
+    : shaderProgram_(shaderProgram)
+    , vao_(vao)
+    , vbo_(vbo)
+    , viewportUniformLocation_(viewportUniformLocation)
+    , colorUniformLocation_(colorUniformLocation)
+    , maxLineWidth_(maxLineWidth)
+    , scratchVertices_(scratchVertices)
   {
     glUseProgram(shaderProgram_);
     glBindVertexArray(vao_);
@@ -205,6 +207,11 @@ public:
     glLineWidth(kDefaultLineWidth);
     glUseProgram(0);
   }
+
+  DrawSession(const DrawSession&) = delete;
+  DrawSession& operator=(const DrawSession&) = delete;
+  DrawSession(DrawSession&&) = delete;
+  DrawSession& operator=(DrawSession&&) = delete;
 
   void setViewport(const RenderViewport& viewport) const noexcept
   {
@@ -231,14 +238,14 @@ public:
       return;
     }
 
-    auto vertices = std::vector<float>{};
-    vertices.reserve(points.size() * 2U);
+    scratchVertices_.clear();
+    scratchVertices_.reserve(points.size() * 2U);
     for (const auto& point : points) {
-      vertices.push_back(static_cast<float>(point.x()));
-      vertices.push_back(static_cast<float>(point.y()));
+      scratchVertices_.push_back(static_cast<float>(point.x()));
+      scratchVertices_.push_back(static_cast<float>(point.y()));
     }
 
-    drawVertices(vertices, mode);
+    drawVertices(scratchVertices_, mode);
   }
 
   void drawVertices(const VertexSpan vertices, const GLenum mode) const noexcept
@@ -254,6 +261,8 @@ public:
     glDrawArrays(mode, 0, static_cast<GLsizei>(vertices.size() / 2U));
   }
 
+  [[nodiscard]] std::vector<float>& scratch() const noexcept { return scratchVertices_; }
+
 private:
   GLuint shaderProgram_ = 0;
   GLuint vao_ = 0;
@@ -261,6 +270,7 @@ private:
   GLint viewportUniformLocation_ = -1;
   GLint colorUniformLocation_ = -1;
   float maxLineWidth_ = kDefaultLineWidth;
+  std::vector<float>& scratchVertices_;
 };
 
 [[nodiscard]] double
@@ -345,26 +355,27 @@ appendLine(std::vector<float>& vertices,
   vertices.push_back(static_cast<float>(y1));
 }
 
-[[nodiscard]] std::vector<float>
-buildGridVertices(const BoundingBox& bounds, const double step)
+void
+fillGridVertices(std::vector<float>& vertices,
+                 const BoundingBox& bounds,
+                 double gridStep)
 {
-  if (!bounds.hasData() || step <= 0.0) {
-    return {};
+  vertices.clear();
+  if (!bounds.hasData() || gridStep <= 0.0) {
+    return;
   }
 
-  auto vertices = std::vector<float>{};
-  const auto startZ = std::floor(bounds.minZ / step) * step;
-  const auto startR = std::floor(bounds.minR / step) * step;
-  const auto epsilon = step * 0.5;
+  const auto minZ = std::floor(bounds.minZ / gridStep) * gridStep;
+  const auto maxZ = std::ceil(bounds.maxZ / gridStep) * gridStep;
+  const auto minR = std::floor(bounds.minR / gridStep) * gridStep;
+  const auto maxR = std::ceil(bounds.maxR / gridStep) * gridStep;
 
-  for (auto zValue = startZ; zValue <= bounds.maxZ + epsilon; zValue += step) {
-    appendLine(vertices, zValue, bounds.minR, zValue, bounds.maxR);
+  for (auto zValue = minZ; zValue <= (maxZ + (gridStep * 0.5)); zValue += gridStep) {
+    appendLine(vertices, zValue, minR, zValue, maxR);
   }
-  for (auto rValue = startR; rValue <= bounds.maxR + epsilon; rValue += step) {
-    appendLine(vertices, bounds.minZ, rValue, bounds.maxZ, rValue);
+  for (auto rValue = minR; rValue <= (maxR + (gridStep * 0.5)); rValue += gridStep) {
+    appendLine(vertices, minZ, rValue, maxZ, rValue);
   }
-
-  return vertices;
 }
 
 void
@@ -374,15 +385,17 @@ drawCoordinateGrid(const RenderViewport& viewport, const DrawSession& drawSessio
     niceGridStep(std::max(viewport.rangeZ, viewport.rangeR), kTargetGridLineCount);
   const auto minorStep = majorStep / 5.0;
 
+  auto& vertices = drawSession.scratch();
+
   drawSession.setLineWidth(kDefaultLineWidth);
   drawSession.setColor(kMinorGridColor);
-  const auto minorGridVertices = buildGridVertices(viewport.bounds, minorStep);
-  drawSession.drawVertices(minorGridVertices, GL_LINES);
+  fillGridVertices(vertices, viewport.bounds, minorStep);
+  drawSession.drawVertices(vertices, GL_LINES);
 
   drawSession.setLineWidth(1.2F);
   drawSession.setColor(kMajorGridColor);
-  const auto majorGridVertices = buildGridVertices(viewport.bounds, majorStep);
-  drawSession.drawVertices(majorGridVertices, GL_LINES);
+  fillGridVertices(vertices, viewport.bounds, majorStep);
+  drawSession.drawVertices(vertices, GL_LINES);
 }
 
 void
@@ -629,7 +642,8 @@ GeometryRenderer::render(const core::MeridionalGeometry& geom,
 
   const auto viewport = makeViewport(geom, viewportWidth, viewportHeight);
   auto drawSession = DrawSession{
-    shaderProgram_, vao_, vbo_, viewportUniformLocation_, colorUniformLocation_, maxLineWidth_};
+    shaderProgram_, vao_, vbo_, viewportUniformLocation_, colorUniformLocation_, maxLineWidth_,
+    scratchVertices_};
   drawSession.setViewport(viewport);
 
   if (settings.showCoordGrid) {
