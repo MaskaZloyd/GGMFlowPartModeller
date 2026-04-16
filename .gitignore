@@ -9,3 +9,7 @@ coverage-report/
 .vscode/
 ggm.log
 imgui.ini
+perf.data*
+perf_*.data
+perf_*.txt
+bench_*.txt
