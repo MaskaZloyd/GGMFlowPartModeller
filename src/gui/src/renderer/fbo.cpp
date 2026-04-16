@@ -9,41 +9,26 @@ Fbo::~Fbo() {
 }
 
 Fbo::Fbo(Fbo&& other) noexcept
-    : msFbo_(other.msFbo_)
-    , msColorRbo_(other.msColorRbo_)
-    , msDepthRbo_(other.msDepthRbo_)
-    , fbo_(other.fbo_)
-    , colorTex_(other.colorTex_)
-    , width_(other.width_)
-    , height_(other.height_)
-    , samples_(other.samples_) {
-  other.msFbo_ = 0;
-  other.msColorRbo_ = 0;
-  other.msDepthRbo_ = 0;
-  other.fbo_ = 0;
-  other.colorTex_ = 0;
-  other.width_ = 0;
-  other.height_ = 0;
-}
+    : msFbo_(std::exchange(other.msFbo_, 0))
+    , msColorRbo_(std::exchange(other.msColorRbo_, 0))
+    , msDepthRbo_(std::exchange(other.msDepthRbo_, 0))
+    , fbo_(std::exchange(other.fbo_, 0))
+    , colorTex_(std::exchange(other.colorTex_, 0))
+    , width_(std::exchange(other.width_, 0))
+    , height_(std::exchange(other.height_, 0))
+    , samples_(std::exchange(other.samples_, 0)) {}
 
 Fbo& Fbo::operator=(Fbo&& other) noexcept {
   if (this != &other) {
     destroy();
-    msFbo_ = other.msFbo_;
-    msColorRbo_ = other.msColorRbo_;
-    msDepthRbo_ = other.msDepthRbo_;
-    fbo_ = other.fbo_;
-    colorTex_ = other.colorTex_;
-    width_ = other.width_;
-    height_ = other.height_;
-    samples_ = other.samples_;
-    other.msFbo_ = 0;
-    other.msColorRbo_ = 0;
-    other.msDepthRbo_ = 0;
-    other.fbo_ = 0;
-    other.colorTex_ = 0;
-    other.width_ = 0;
-    other.height_ = 0;
+    msFbo_ = std::exchange(other.msFbo_, 0);
+    msColorRbo_ = std::exchange(other.msColorRbo_, 0);
+    msDepthRbo_ = std::exchange(other.msDepthRbo_, 0);
+    fbo_ = std::exchange(other.fbo_, 0);
+    colorTex_ = std::exchange(other.colorTex_, 0);
+    width_ = std::exchange(other.width_, 0);
+    height_ = std::exchange(other.height_, 0);
+    samples_ = std::exchange(other.samples_, 0);
   }
   return *this;
 }
