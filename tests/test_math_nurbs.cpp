@@ -5,6 +5,7 @@
 #include "math/nurbs.hpp"
 
 #include <array>
+#include <cmath>
 #include <numbers>
 
 using namespace ggm::math;
@@ -81,4 +82,28 @@ TEST_CASE("buildFromSegments: correct knot and control-point count", "[nurbs]")
   REQUIRE(curve.controlPoints.size() == 2 * n + 1);
   REQUIRE(curve.weights.size() == 2 * n + 1);
   REQUIRE(curve.knots.size() == 2 * n + 1 + static_cast<std::size_t>(curve.degree) + 1);
+}
+
+// Regression: ensure evaluate on a two-arc half-circle produces points
+// within 1e-10 of the analytic circle. This protects the de Boor rewrite
+// by tying the output to a ground-truth, not to the previous implementation.
+TEST_CASE("evaluate: two-arc half-circle matches analytic radius", "[nurbs]")
+{
+  const Vec2 center{2.0, 3.0};
+  constexpr double radius = 1.5;
+  const std::array<ArcBezier, 2> segs = {
+    arcToBezier(center, radius, 0.0, std::numbers::pi / 2.0),
+    arcToBezier(center, radius, std::numbers::pi / 2.0, std::numbers::pi),
+  };
+
+  const auto curve = buildFromSegments(segs);
+  const auto pts = evaluate(curve, 500);
+
+  REQUIRE(pts.size() == 500);
+  for (const auto& point : pts) {
+    const double diffX = point.x() - center.x();
+    const double diffY = point.y() - center.y();
+    const double dist = std::sqrt((diffX * diffX) + (diffY * diffY));
+    REQUIRE_THAT(dist, WithinRel(radius, 1e-10));
+  }
 }

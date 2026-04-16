@@ -1,6 +1,9 @@
 #include "math/nurbs.hpp"
 
+#include <array>
+#include <cassert>
 #include <cmath>
+#include <cstddef>
 
 namespace ggm::math {
 
@@ -36,62 +39,86 @@ NurbsCurve buildFromSegments(std::span<const ArcBezier> segments) noexcept {
 
 namespace {
 
-// Recursive B-spline basis function (Cox-de Boor).
-double basisFunc(int idx,
-                 int degree,
-                 double param,
-                 const std::vector<double>& knots) noexcept {
-  if (degree == 0) {
-    return (knots[static_cast<std::size_t>(idx)] <= param &&
-            param < knots[static_cast<std::size_t>(idx + 1)])
-               ? 1.0
-               : 0.0;
+// Binary-search for the knot span such that knots[k] <= param < knots[k+1].
+// numCps = controlPoints.size() - 1, deg = curve degree. Span index in [deg, numCps].
+[[nodiscard]] std::size_t findSpan(std::size_t numCps, std::size_t deg, double param,
+                                   const std::vector<double>& knots) noexcept {
+  if (param >= knots[numCps + 1]) {
+    return numCps;
   }
-
-  auto uidx = static_cast<std::size_t>(idx);
-  auto udeg = static_cast<std::size_t>(degree);
-
-  double left = 0.0;
-  double denomLeft = knots[uidx + udeg] - knots[uidx];
-  if (denomLeft != 0.0) {
-    left = (param - knots[uidx]) / denomLeft * basisFunc(idx, degree - 1, param, knots);
+  if (param <= knots[deg]) {
+    return deg;
   }
-
-  double right = 0.0;
-  double denomRight = knots[uidx + udeg + 1] - knots[uidx + 1];
-  if (denomRight != 0.0) {
-    right = (knots[uidx + udeg + 1] - param) / denomRight *
-            basisFunc(idx + 1, degree - 1, param, knots);
+  std::size_t low = deg;
+  std::size_t high = numCps + 1;
+  std::size_t mid = (low + high) / 2;
+  while (param < knots[mid] || param >= knots[mid + 1]) {
+    if (param < knots[mid]) {
+      high = mid;
+    } else {
+      low = mid;
+    }
+    mid = (low + high) / 2;
   }
+  return mid;
+}
 
-  return left + right;
+// Compute the (deg+1) non-zero basis functions N[span-deg..span] at param
+// using the triangular recurrence from The NURBS Book section 2.5
+// (Piegl and Tiller, algorithm A2.2).
+// Only for deg = 2 in this codebase — the fixed-size arrays reflect that.
+void basisFunctions(std::size_t span, double param, std::size_t deg,
+                    const std::vector<double>& knots,
+                    std::array<double, 3>& out) noexcept {
+  std::array<double, 3> leftDelta{};
+  std::array<double, 3> rightDelta{};
+  out[0] = 1.0;
+  for (std::size_t jj = 1; jj <= deg; ++jj) {
+    leftDelta[jj] = param - knots[span + 1 - jj];
+    rightDelta[jj] = knots[span + jj] - param;
+    double saved = 0.0;
+    for (std::size_t rr = 0; rr < jj; ++rr) {
+      const double denom = rightDelta[rr + 1] + leftDelta[jj - rr];
+      const double temp = denom != 0.0 ? out[rr] / denom : 0.0;
+      out[rr] = saved + (rightDelta[rr + 1] * temp);
+      saved = leftDelta[jj - rr] * temp;
+    }
+    out[jj] = saved;
+  }
 }
 
 } // namespace
 
 std::vector<Vec2> evaluate(const NurbsCurve& curve, int numPoints) noexcept {
   std::vector<Vec2> result;
+  if (numPoints <= 0 || curve.controlPoints.empty()) {
+    return result;
+  }
+  assert(curve.degree == 2 && "evaluate: fixed-size basis arrays assume degree == 2");
   result.reserve(static_cast<std::size_t>(numPoints));
 
-  auto numCps = static_cast<int>(curve.controlPoints.size());
+  const auto deg = static_cast<std::size_t>(curve.degree);
+  const std::size_t numCps = curve.controlPoints.size() - 1;
 
   for (int ptIdx = 0; ptIdx < numPoints; ++ptIdx) {
-    double param = static_cast<double>(ptIdx) / static_cast<double>(numPoints - 1);
-
-    // Handle endpoint exactly
     if (ptIdx == numPoints - 1) {
       result.push_back(curve.controlPoints.back());
       continue;
     }
+    const double param =
+      static_cast<double>(ptIdx) / static_cast<double>(numPoints - 1);
 
-    double denominator = 0.0;
+    const std::size_t span = findSpan(numCps, deg, param, curve.knots);
+    std::array<double, 3> basis{};
+    basisFunctions(span, param, deg, curve.knots, basis);
+
     Vec2 numerator = Vec2::Zero();
-
-    for (int cpIdx = 0; cpIdx < numCps; ++cpIdx) {
-      double basis = basisFunc(cpIdx, curve.degree, param, curve.knots);
-      double weighted = basis * curve.weights[static_cast<std::size_t>(cpIdx)];
-      numerator += weighted * curve.controlPoints[static_cast<std::size_t>(cpIdx)];
-      denominator += weighted;
+    double denominator = 0.0;
+    for (std::size_t jj = 0; jj <= deg; ++jj) {
+      const std::size_t cpIdx = span - deg + jj;
+      const double wgt = curve.weights[cpIdx] * basis[jj];
+      numerator += wgt * curve.controlPoints[cpIdx];
+      denominator += wgt;
     }
 
     if (std::abs(denominator) > 1e-15) {
