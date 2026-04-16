@@ -40,3 +40,10 @@ add_executable(test_gui_commands
 )
 target_link_libraries(test_gui_commands PRIVATE Catch2::Catch2WithMain gui)
 catch_discover_tests(test_gui_commands)
+
+# ---------------------------------------------------------------------------
+# bench_hotpaths — standalone benchmark binary for `perf record`.
+# NOT registered with CTest. Invoked manually from the release preset.
+# ---------------------------------------------------------------------------
+add_executable(bench_hotpaths bench_hotpaths.cpp)
+target_link_libraries(bench_hotpaths PRIVATE core math)
