@@ -5,6 +5,7 @@ add_library(core STATIC
     src/strip_grid.cpp
     src/fem_solver.cpp
     src/streamline_extractor.cpp
+    src/velocity_field.cpp
     src/area_profile.cpp
     src/flow_solver.cpp
     src/async_flow_solver.cpp
