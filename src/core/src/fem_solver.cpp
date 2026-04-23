@@ -31,14 +31,20 @@ TriLocal
 computeElementMatrices(const math::Vec2& p0, const math::Vec2& p1, const math::Vec2& p2) noexcept
 {
   TriLocal result{};
+  result.stiffness.setZero();
+  result.firstOrder.setZero();
+  result.area = 0.0;
+  result.degenerate = false;
 
   // z = x(), r = y()
-  double z0 = p0.x(), r0 = p0.y();
-  double z1 = p1.x(), r1 = p1.y();
-  double z2 = p2.x(), r2 = p2.y();
+  const double z0 = p0.x();
+  const double r0 = p0.y();
+  const double z1 = p1.x();
+  const double r1 = p1.y();
+  const double z2 = p2.x();
+  const double r2 = p2.y();
 
-  // 2 * area (signed)
-  double detJ = (z1 - z0) * (r2 - r0) - (z2 - z0) * (r1 - r0);
+  const double detJ = (z1 - z0) * (r2 - r0) - (z2 - z0) * (r1 - r0);
 
   if (std::abs(detJ) < DET_TOL) {
     result.degenerate = true;
@@ -46,11 +52,7 @@ computeElementMatrices(const math::Vec2& p0, const math::Vec2& p1, const math::V
   }
 
   result.area = std::abs(detJ) / 2.0;
-  result.degenerate = false;
 
-  // Gradient of P1 basis functions (constant per element):
-  // grad_phi_i = (1/(2*A)) * [r_j - r_k, z_k - z_j]
-  // where (i,j,k) are cyclic permutations of (0,1,2)
   Eigen::Vector2d gradPhi0{r1 - r2, z2 - z1};
   Eigen::Vector2d gradPhi1{r2 - r0, z0 - z2};
   Eigen::Vector2d gradPhi2{r0 - r1, z1 - z0};
@@ -59,24 +61,24 @@ computeElementMatrices(const math::Vec2& p0, const math::Vec2& p1, const math::V
   gradPhi1 /= detJ;
   gradPhi2 /= detJ;
 
-  std::array<Eigen::Vector2d, 3> gradPhi = {gradPhi0, gradPhi1, gradPhi2};
+  const std::array<Eigen::Vector2d, 3> gradPhi = {gradPhi0, gradPhi1, gradPhi2};
 
-  // Stiffness: K_ij = (grad_phi_i . grad_phi_j) * A
+  const double rElem = (r0 + r1 + r2) / 3.0;
+
+  if (rElem <= R_CLAMP) {
+    result.degenerate = true;
+    return result;
+  }
+
+  const double invR = 1.0 / rElem;
+
+  // Conservative weak form:
+  // ∫ (1/r) grad(phi_i) · grad(phi_j) dΩ
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
       result.stiffness(i, j) =
-        gradPhi[static_cast<std::size_t>(i)].dot(gradPhi[static_cast<std::size_t>(j)]) *
-        result.area;
-    }
-  }
-
-  // First-order term: T_ij = -(A/3) * (dphi_j/dr) / r_elem. Sign kept as in
-  // the Python reference implementation while we diagnose the distribution.
-  double rElem = std::max((r0 + r1 + r2) / 3.0, R_CLAMP);
-  for (int i = 0; i < 3; ++i) {
-    for (int j = 0; j < 3; ++j) {
-      result.firstOrder(i, j) =
-        -(result.area / 3.0) * gradPhi[static_cast<std::size_t>(j)].y() / rElem;
+        result.area * invR *
+        gradPhi[static_cast<std::size_t>(i)].dot(gradPhi[static_cast<std::size_t>(j)]);
     }
   }
 
@@ -120,7 +122,7 @@ solveFem(StripGrid grid) noexcept
     }
 
     auto& triplets = threadTriplets.local();
-    Eigen::Matrix3d combined = local.stiffness + local.firstOrder;
+    Eigen::Matrix3d combined = local.stiffness;
 
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 3; ++j) {
