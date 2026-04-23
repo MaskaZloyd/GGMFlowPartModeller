@@ -28,6 +28,7 @@ add_executable(test_core
     test_core_strip_grid.cpp
     test_core_fem_solver.cpp
     test_core_serialization.cpp
+    test_core_streamline_extractor.cpp
     test_core_velocity_field.cpp
 )
 target_link_libraries(test_core PRIVATE Catch2::Catch2WithMain core)
