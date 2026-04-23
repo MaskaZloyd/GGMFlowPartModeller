@@ -6,6 +6,8 @@
 #include <array>
 #include <cmath>
 #include <numbers>
+#include <optional>
+#include <utility>
 
 #include <Eigen/LU>
 
@@ -14,6 +16,15 @@ namespace ggm::core {
 namespace {
 
 constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
+constexpr double DET_TOL = 1e-12;
+constexpr double ANGLE_TOL = 1e-12;
+constexpr double JOIN_TOL = 1e-7;
+
+double
+cross2d(const math::Vec2& a, const math::Vec2& b) noexcept
+{
+  return a.x() * b.y() - a.y() * b.x();
+}
 
 double
 vecAngle(const math::Vec2& vec) noexcept
@@ -21,112 +32,209 @@ vecAngle(const math::Vec2& vec) noexcept
   return std::atan2(vec.y(), vec.x());
 }
 
+math::Vec2
+unitFromAngle(double angle) noexcept
+{
+  return {std::cos(angle), std::sin(angle)};
+}
+
+math::Vec2
+leftNormal(const math::Vec2& tangent) noexcept
+{
+  return {-tangent.y(), tangent.x()};
+}
+
+// Infinite line intersection:
+//   p0 + t * d0 = p1 + s * d1
+std::optional<math::Vec2>
+intersectLines(const math::Vec2& p0,
+               const math::Vec2& d0,
+               const math::Vec2& p1,
+               const math::Vec2& d1) noexcept
+{
+  const double det = cross2d(d0, d1);
+
+  if (std::abs(det) < DET_TOL) {
+    return std::nullopt;
+  }
+
+  const double t = cross2d(p1 - p0, d1) / det;
+  return p0 + t * d0;
+}
+
+bool
+isFiniteVec(const math::Vec2& v) noexcept
+{
+  return std::isfinite(v.x()) && std::isfinite(v.y());
+}
+
 } // namespace
 
 Result<MeridionalGeometry>
-buildGeometry(const PumpParams& params) noexcept
+buildGeometry(const PumpParams& params)
 {
-  // Convert angles from degrees to radians
-  double al1 = params.al1Deg * DEG_TO_RAD;
-  double al2 = params.al2Deg * DEG_TO_RAD;
-  double al02 = params.al02Deg * DEG_TO_RAD;
-  double be1 = params.be1Deg * DEG_TO_RAD;
-  double be2 = std::numbers::pi / 2.0 - be1 + al1;
-  double be3Raw = params.be3RawDeg * DEG_TO_RAD;
-  double be3 = be3Raw - std::abs(al02);
-  double be4 = std::numbers::pi / 2.0 - be3 + al2;
+  const double al1 = params.al1Deg * DEG_TO_RAD;
+  const double al2 = params.al2Deg * DEG_TO_RAD;
+  const double al02 = params.al02Deg * DEG_TO_RAD;
+  const double be1 = params.be1Deg * DEG_TO_RAD;
+
+  // Hub:
+  // be2 is the sweep from the first hub arc tangent to the outlet hub tangent.
+  const double be2 = std::numbers::pi / 2.0 - be1 + al1;
+
+  // Shroud:
+  // be3Junction is the absolute tangent angle at the junction P7.
+  // be3Sweep is the actual sweep of the first shroud arc from inlet tangent to P7.
+  const double be3Junction = params.be3RawDeg * DEG_TO_RAD;
+  const double be3Sweep = be3Junction - al02;
+
+  // Outlet shroud tangent angle. This matches the old identity:
+  // be3Junction + be4 = pi/2 + al2
+  const double outletShroudAngle = std::numbers::pi / 2.0 + al2;
+  const double be4 = outletShroudAngle - be3Junction;
+
+  if (be1 <= 0.0 || be2 <= 0.0 || be3Sweep <= 0.0 || be4 <= 0.0) {
+    return std::unexpected(CoreError::GeometryBuildFailed);
+  }
 
   // ---- HUB geometry ----
-  math::Vec2 hubP0{0.0, params.dvt / 2.0};
-  math::Vec2 hubP1 = hubP0 + math::Vec2{params.xa, 0.0};
 
-  // Arc 1: center above P1
-  math::Vec2 hubO1 = hubP1 + math::Vec2{0.0, params.r1};
-  double hubArc1Start = -std::numbers::pi / 2.0;
-  auto hubArc1 = math::arcToBezier(hubO1, params.r1, hubArc1Start, hubArc1Start + be1);
-  math::Vec2 hubP2 = hubArc1.p2;
+  const math::Vec2 hubP0{0.0, params.dvt / 2.0};
+  const math::Vec2 hubP1 = hubP0 + math::Vec2{params.xa, 0.0};
 
-  // Arc 2: G1-continuous with arc 1
-  math::Vec2 radialDir = (hubO1 - hubP2).normalized();
-  math::Vec2 hubO2 = hubP2 + params.r2 * radialDir;
-  double hubArc2Start = vecAngle(hubP2 - hubO2);
-  auto hubArc2 = math::arcToBezier(hubO2, params.r2, hubArc2Start, hubArc2Start + be2);
-  math::Vec2 hubP3 = hubArc2.p2;
+  const math::Vec2 hubO1 = hubP1 + math::Vec2{0.0, params.r1};
+  const double hubArc1Start = -std::numbers::pi / 2.0;
+  const auto hubArc1 = math::arcToBezier(hubO1, params.r1, hubArc1Start, hubArc1Start + be1);
 
-  // Exit line: from P3 to outlet radius
-  double alphaStar = -std::numbers::pi / 2.0 + al1;
-  math::Vec2 exitDir{std::cos(alphaStar), std::sin(alphaStar)};
-  double exitParam = (params.d2 / 2.0 - hubP3.y()) / exitDir.y();
-  math::Vec2 hubP4 = hubP3 + exitParam * exitDir;
+  const math::Vec2 hubP2 = hubArc1.p2;
 
-  auto hubSeg0 = math::segToBezier(hubP0, hubP1);
-  auto hubSeg3 = math::segToBezier(hubP3, hubP4);
+  const math::Vec2 radialDir = (hubO1 - hubP2).normalized();
+  const math::Vec2 hubO2 = hubP2 + params.r2 * radialDir;
 
-  std::array<math::ArcBezier, 4> hubSegments = {hubSeg0, hubArc1, hubArc2, hubSeg3};
+  const double hubArc2Start = vecAngle(hubP2 - hubO2);
+  const auto hubArc2 = math::arcToBezier(hubO2, params.r2, hubArc2Start, hubArc2Start + be2);
+
+  const math::Vec2 hubP3 = hubArc2.p2;
+
+  const double hubExitAngle = -std::numbers::pi / 2.0 + al1;
+  const math::Vec2 hubExitDir = unitFromAngle(hubExitAngle);
+
+  if (std::abs(hubExitDir.y()) < DET_TOL) {
+    return std::unexpected(CoreError::GeometryBuildFailed);
+  }
+
+  const double hubExitParam = (params.d2 / 2.0 - hubP3.y()) / hubExitDir.y();
+
+  const math::Vec2 hubP4 = hubP3 + hubExitParam * hubExitDir;
+
+  const auto hubSeg0 = math::segToBezier(hubP0, hubP1);
+  const auto hubSeg3 = math::segToBezier(hubP3, hubP4);
+
+  const std::array<math::ArcBezier, 4> hubSegments = {hubSeg0, hubArc1, hubArc2, hubSeg3};
+
   auto hubNurbs = math::buildFromSegments(hubSegments);
   auto hubCurve = math::evaluate(hubNurbs, 1500);
 
   // ---- SHROUD geometry ----
-  math::Vec2 shrP5 = hubP4 - math::Vec2{params.b2, 0.0};
-  double alpha2Star = -std::numbers::pi / 2.0 + al2;
-  math::Vec2 exitDir5{std::cos(alpha2Star), std::sin(alpha2Star)};
 
-  // Intersection point IS on shroud inlet line
-  math::Vec2 intersectionPt = shrP5 + ((params.din / 2.0 - shrP5.y()) / exitDir5.y()) * exitDir5;
+  const math::Vec2 shrP9{0.0, params.din / 2.0};
+  const math::Vec2 shrP5 = hubP4 - math::Vec2{params.b2, 0.0};
 
-  // Solve 2x2 system for arc centers
-  math::Vec2 vec1{1.0, 0.0};
-  math::Vec2 vec2Shr{std::cos(be3 + be4), std::sin(be3 + be4)};
-  math::Vec2 normal1{0.0, 1.0};
-  math::Vec2 normal2{-vec2Shr.y(), vec2Shr.x()};
-  math::Vec2 wVec{-std::sin(be3), std::cos(be3)};
+  const math::Vec2 inletTangent = unitFromAngle(al02);
+  const math::Vec2 outletTangent = unitFromAngle(outletShroudAngle);
 
-  Eigen::Matrix2d matA;
-  matA.col(0) = -vec1;
-  matA.col(1) = vec2Shr;
-  math::Vec2 rhs = (params.r4 - params.r3) * wVec + params.r3 * normal1 - params.r4 * normal2;
+  const math::Vec2 inletNormal = leftNormal(inletTangent);
+  const math::Vec2 outletNormal = leftNormal(outletTangent);
 
-  double det = matA.determinant();
-  if (std::abs(det) < 1e-12) {
+  // Common normal at the junction between the two shroud arcs.
+  // If tangent angle at P7 is beta, left normal is (-sin beta, cos beta).
+  const math::Vec2 junctionNormal = leftNormal(unitFromAngle(be3Junction));
+
+  const auto intersectionOpt = intersectLines(shrP9, inletTangent, shrP5, outletTangent);
+
+  if (!intersectionOpt.has_value()) {
     return std::unexpected(CoreError::GeometryBuildFailed);
   }
-  math::Vec2 solution = matA.inverse() * rhs;
-  double dist1 = solution.x();
-  double dist2 = solution.y();
 
-  math::Vec2 shrP8 = intersectionPt + dist1 * vec1;
-  math::Vec2 shrP6 = intersectionPt + dist2 * vec2Shr;
-  math::Vec2 shrO3 = shrP8 + params.r3 * normal1;
-  math::Vec2 shrO4 = shrP6 + params.r4 * normal2;
+  const math::Vec2 tangentIntersection = *intersectionOpt;
 
-  // Shroud inlet point P9
-  math::Vec2 shrP9;
-  if (std::abs(al02) < 1e-12) {
-    shrP9 = math::Vec2{0.0, params.din / 2.0};
-  } else {
-    // Rotate (0, -1) by -al02 to get tangent at P8
-    double cosAl02 = std::cos(-al02);
-    double sinAl02 = std::sin(-al02);
-    math::Vec2 vecDown{0.0, -1.0};
-    math::Vec2 rotated{vecDown.x() * cosAl02 - vecDown.y() * sinAl02,
-                       vecDown.x() * sinAl02 + vecDown.y() * cosAl02};
-    shrP8 = shrO3 + params.r3 * rotated;
-    math::Vec2 dir9{std::cos(al02), std::sin(al02)};
-    double param9 = -shrP8.x() / dir9.x();
-    shrP9 = shrP8 + param9 * dir9;
+  // Unknowns:
+  //   shrP8 = tangentIntersection + distIn  * inletTangent
+  //   shrP6 = tangentIntersection + distOut * outletTangent
+  //
+  // Centers:
+  //   shrO3 = shrP8 + r3 * inletNormal
+  //   shrO4 = shrP6 + r4 * outletNormal
+  //
+  // G1 junction condition:
+  //   shrO4 - shrO3 = (r4 - r3) * junctionNormal
+  //
+  // Therefore:
+  //   -distIn * inletTangent + distOut * outletTangent =
+  //       (r4 - r3) * junctionNormal
+  //       + r3 * inletNormal
+  //       - r4 * outletNormal
+  Eigen::Matrix2d matA;
+  matA.col(0) = -inletTangent;
+  matA.col(1) = outletTangent;
+
+  const math::Vec2 rhs =
+    (params.r4 - params.r3) * junctionNormal + params.r3 * inletNormal - params.r4 * outletNormal;
+
+  const double det = matA.determinant();
+
+  if (std::abs(det) < DET_TOL) {
+    return std::unexpected(CoreError::GeometryBuildFailed);
   }
 
-  // Build shroud segments (inlet to exit order)
-  auto shrSeg0 = math::segToBezier(shrP9, shrP8);
-  double shrArc1Start = vecAngle(shrP8 - shrO3);
-  auto shrArc1 = math::arcToBezier(shrO3, params.r3, shrArc1Start, shrArc1Start + be3);
-  // P7 is the junction between arcs — use constraint formula from Python, not arc endpoint
-  math::Vec2 shrP7 = shrO3 - params.r3 * wVec;
-  double shrArc2Start = vecAngle(shrP7 - shrO4);
-  auto shrArc2 = math::arcToBezier(shrO4, params.r4, shrArc2Start, shrArc2Start + be4);
-  auto shrSeg3 = math::segToBezier(shrP6, shrP5);
+  const math::Vec2 solution = matA.fullPivLu().solve(rhs);
 
-  std::array<math::ArcBezier, 4> shroudSegments = {shrSeg0, shrArc1, shrArc2, shrSeg3};
+  if (!isFiniteVec(solution)) {
+    return std::unexpected(CoreError::GeometryBuildFailed);
+  }
+
+  const double distIn = solution.x();
+  const double distOut = solution.y();
+
+  const math::Vec2 shrP8 = tangentIntersection + distIn * inletTangent;
+
+  const math::Vec2 shrP6 = tangentIntersection + distOut * outletTangent;
+
+  const math::Vec2 shrO3 = shrP8 + params.r3 * inletNormal;
+  const math::Vec2 shrO4 = shrP6 + params.r4 * outletNormal;
+
+  const math::Vec2 shrP7 = shrO3 - params.r3 * junctionNormal;
+
+  // Basic direction checks. If these fail, the input parameters describe an
+  // invalid or self-crossing meridional contour for this construction.
+  if ((shrP8 - shrP9).dot(inletTangent) <= 0.0) {
+    return std::unexpected(CoreError::GeometryBuildFailed);
+  }
+
+  if ((shrP5 - shrP6).dot(outletTangent) <= 0.0) {
+    return std::unexpected(CoreError::GeometryBuildFailed);
+  }
+
+  const auto shrSeg0 = math::segToBezier(shrP9, shrP8);
+
+  const double shrArc1Start = vecAngle(shrP8 - shrO3);
+  const auto shrArc1 = math::arcToBezier(shrO3, params.r3, shrArc1Start, shrArc1Start + be3Sweep);
+
+  if ((shrArc1.p2 - shrP7).norm() > JOIN_TOL) {
+    return std::unexpected(CoreError::GeometryBuildFailed);
+  }
+
+  const double shrArc2Start = vecAngle(shrP7 - shrO4);
+  const auto shrArc2 = math::arcToBezier(shrO4, params.r4, shrArc2Start, shrArc2Start + be4);
+
+  if ((shrArc2.p2 - shrP6).norm() > JOIN_TOL) {
+    return std::unexpected(CoreError::GeometryBuildFailed);
+  }
+
+  const auto shrSeg3 = math::segToBezier(shrP6, shrP5);
+
+  const std::array<math::ArcBezier, 4> shroudSegments = {shrSeg0, shrArc1, shrArc2, shrSeg3};
+
   auto shroudNurbs = math::buildFromSegments(shroudSegments);
   auto shroudCurve = math::evaluate(shroudNurbs, 1500);
 
