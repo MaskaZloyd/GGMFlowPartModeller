@@ -19,9 +19,15 @@ struct DockspaceActions
   bool requestQuit = false;
 };
 
+struct DockspaceLayout
+{
+  DockspaceActions actions;
+  unsigned int moduleDockspaceId = 0;
+};
+
 // Build fullscreen dockspace with main menu bar.
-// Returns actions requested by the user via the menu.
-[[nodiscard]] DockspaceActions
+// Returns requested actions plus the active module dockspace.
+[[nodiscard]] DockspaceLayout
 buildDockspace(bool canUndo, bool canRedo) noexcept;
 
 // Status bar pinned to the bottom of the screen. Shows the current file

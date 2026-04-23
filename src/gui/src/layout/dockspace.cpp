@@ -5,13 +5,79 @@
 #include <cstdio>
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 namespace ggm::gui {
 
-DockspaceActions
+namespace {
+
+constexpr const char* ROOT_DOCKSPACE_WINDOW = "##DockspaceRoot";
+constexpr const char* ROOT_DOCKSPACE_NAME = "MainDockSpace";
+constexpr const char* MODULE_WINDOW_TITLE = "Меридианное сечение";
+constexpr const char* MODULE_DOCKSPACE_NAME = "MeridionalSectionDockSpace";
+
+void
+buildMeridionalSectionLayout(ImGuiID dockspaceId, ImVec2 size) noexcept
+{
+  if (dockspaceId == 0 || ImGui::DockBuilderGetNode(dockspaceId) != nullptr) {
+    return;
+  }
+
+  ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
+  ImGui::DockBuilderSetNodeSize(dockspaceId, size);
+
+  ImGuiID geometryNode = dockspaceId;
+  ImGuiID logNode =
+    ImGui::DockBuilderSplitNode(geometryNode, ImGuiDir_Down, 0.24F, nullptr, &geometryNode);
+  ImGuiID sidebarNode =
+    ImGui::DockBuilderSplitNode(geometryNode, ImGuiDir_Left, 0.24F, nullptr, &geometryNode);
+  ImGuiID chartsNode =
+    ImGui::DockBuilderSplitNode(geometryNode, ImGuiDir_Right, 0.30F, nullptr, &geometryNode);
+  ImGuiID settingsNode =
+    ImGui::DockBuilderSplitNode(sidebarNode, ImGuiDir_Down, 0.40F, nullptr, &sidebarNode);
+
+  ImGui::DockBuilderDockWindow("Параметры", sidebarNode);
+  ImGui::DockBuilderDockWindow("Настройки", settingsNode);
+  ImGui::DockBuilderDockWindow("Геометрия", geometryNode);
+  ImGui::DockBuilderDockWindow("Log", logNode);
+  ImGui::DockBuilderDockWindow("График: Площадь F(s)", chartsNode);
+  ImGui::DockBuilderDockWindow("График: Скорость |V|", chartsNode);
+  ImGui::DockBuilderDockWindow("График: ψ средней линии", chartsNode);
+  ImGui::DockBuilderFinish(dockspaceId);
+}
+
+[[nodiscard]] ImGuiID
+drawMeridionalSectionModule(ImGuiID rootDockspaceId) noexcept
+{
+  if (rootDockspaceId != 0) {
+    ImGui::SetNextWindowDockID(rootDockspaceId, ImGuiCond_FirstUseEver);
+  }
+
+  const ImGuiViewport* viewport = ImGui::GetMainViewport();
+  if (viewport != nullptr) {
+    ImGui::SetNextWindowSize(viewport->WorkSize, ImGuiCond_FirstUseEver);
+  }
+
+  ImGuiWindowFlags moduleFlags =
+    ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+
+  ImGuiID moduleDockspaceId = 0;
+  if (ImGui::Begin(MODULE_WINDOW_TITLE, nullptr, moduleFlags)) {
+    moduleDockspaceId = ImGui::GetID(MODULE_DOCKSPACE_NAME);
+    buildMeridionalSectionLayout(moduleDockspaceId, ImGui::GetContentRegionAvail());
+    ImGui::DockSpace(moduleDockspaceId, ImVec2(0.0F, 0.0F));
+  }
+  ImGui::End();
+
+  return moduleDockspaceId;
+}
+
+} // namespace
+
+DockspaceLayout
 buildDockspace(bool canUndo, bool canRedo) noexcept
 {
-  DockspaceActions actions;
+  DockspaceLayout layout;
 
   // Fullscreen dockspace window
   const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -28,41 +94,41 @@ buildDockspace(bool canUndo, bool canRedo) noexcept
   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0F);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0F, 0.0F));
 
-  ImGui::Begin("##DockspaceRoot", nullptr, windowFlags);
+  ImGui::Begin(ROOT_DOCKSPACE_WINDOW, nullptr, windowFlags);
   ImGui::PopStyleVar(3);
 
-  ImGuiID dockspaceId = ImGui::GetID("MainDockSpace");
+  ImGuiID dockspaceId = ImGui::GetID(ROOT_DOCKSPACE_NAME);
   ImGui::DockSpace(dockspaceId, ImVec2(0.0F, 0.0F), ImGuiDockNodeFlags_PassthruCentralNode);
 
   // Main menu bar
   if (ImGui::BeginMenuBar()) {
     if (ImGui::BeginMenu("File")) {
       if (ImGui::MenuItem("New", "Ctrl+N")) {
-        actions.requestNew = true;
+        layout.actions.requestNew = true;
       }
       if (ImGui::MenuItem("Open...", "Ctrl+O")) {
-        actions.requestOpen = true;
+        layout.actions.requestOpen = true;
       }
       ImGui::Separator();
       if (ImGui::MenuItem("Save", "Ctrl+S")) {
-        actions.requestSave = true;
+        layout.actions.requestSave = true;
       }
       if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S")) {
-        actions.requestSaveAs = true;
+        layout.actions.requestSaveAs = true;
       }
       ImGui::Separator();
       if (ImGui::MenuItem("Quit", "Ctrl+Q")) {
-        actions.requestQuit = true;
+        layout.actions.requestQuit = true;
       }
       ImGui::EndMenu();
     }
 
     if (ImGui::BeginMenu("Edit")) {
       if (ImGui::MenuItem("Undo", "Ctrl+Z", false, canUndo)) {
-        actions.requestUndo = true;
+        layout.actions.requestUndo = true;
       }
       if (ImGui::MenuItem("Redo", "Ctrl+Y", false, canRedo)) {
-        actions.requestRedo = true;
+        layout.actions.requestRedo = true;
       }
       ImGui::EndMenu();
     }
@@ -76,29 +142,31 @@ buildDockspace(bool canUndo, bool canRedo) noexcept
   auto& imguiIo = ImGui::GetIO();
   bool ctrl = imguiIo.KeyCtrl;
   if (ctrl && ImGui::IsKeyPressed(ImGuiKey_Z) && canUndo) {
-    actions.requestUndo = true;
+    layout.actions.requestUndo = true;
   }
   if (ctrl && ImGui::IsKeyPressed(ImGuiKey_Y) && canRedo) {
-    actions.requestRedo = true;
+    layout.actions.requestRedo = true;
   }
   if (ctrl && ImGui::IsKeyPressed(ImGuiKey_S)) {
     if (imguiIo.KeyShift) {
-      actions.requestSaveAs = true;
+      layout.actions.requestSaveAs = true;
     } else {
-      actions.requestSave = true;
+      layout.actions.requestSave = true;
     }
   }
   if (ctrl && ImGui::IsKeyPressed(ImGuiKey_O)) {
-    actions.requestOpen = true;
+    layout.actions.requestOpen = true;
   }
   if (ctrl && ImGui::IsKeyPressed(ImGuiKey_N)) {
-    actions.requestNew = true;
+    layout.actions.requestNew = true;
   }
   if (ctrl && ImGui::IsKeyPressed(ImGuiKey_Q)) {
-    actions.requestQuit = true;
+    layout.actions.requestQuit = true;
   }
 
-  return actions;
+  layout.moduleDockspaceId = drawMeridionalSectionModule(dockspaceId);
+
+  return layout;
 }
 
 void

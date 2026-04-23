@@ -106,8 +106,12 @@ drawGeometryPanel(Fbo& fbo,
                   const core::MeridionalGeometry& geom,
                   const core::FlowResults* flow,
                   const RenderSettings& renderSettings,
-                  bool geometryValid) noexcept
+                  bool geometryValid,
+                  ImGuiID dockspaceId) noexcept
 {
+  if (dockspaceId != 0) {
+    ImGui::SetNextWindowDockID(dockspaceId, ImGuiCond_FirstUseEver);
+  }
   ImGui::Begin("Геометрия");
 
   ImVec2 avail = ImGui::GetContentRegionAvail();

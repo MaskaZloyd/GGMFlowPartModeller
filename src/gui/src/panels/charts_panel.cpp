@@ -76,9 +76,12 @@ setupChartWindow(int cascadeIndex) noexcept
 }
 
 [[nodiscard]] bool
-beginChartWindow(const char* title, int cascadeIndex) noexcept
+beginChartWindow(const char* title, int cascadeIndex, ImGuiID dockspaceId) noexcept
 {
   setupChartWindow(cascadeIndex);
+  if (dockspaceId != 0) {
+    ImGui::SetNextWindowDockID(dockspaceId, ImGuiCond_FirstUseEver);
+  }
   return ImGui::Begin(title);
 }
 
@@ -217,9 +220,9 @@ drawMidlinePsiChart(const core::FlowResults& flow) noexcept
 } // namespace
 
 void
-drawChartsPanel(const core::FlowResults* flow, bool flowValid) noexcept
+drawChartsPanel(const core::FlowResults* flow, bool flowValid, ImGuiID dockspaceId) noexcept
 {
-  if (beginChartWindow("График: Площадь F(s)", 0)) {
+  if (beginChartWindow("График: Площадь F(s)", 0, dockspaceId)) {
     if (!flowValid || flow == nullptr) {
       drawMissingDataText("Нет данных расчёта");
     } else if (flow->areaProfile.arcLengths.empty()) {
@@ -230,7 +233,7 @@ drawChartsPanel(const core::FlowResults* flow, bool flowValid) noexcept
   }
   ImGui::End();
 
-  if (beginChartWindow("График: Скорость |V|", 1)) {
+  if (beginChartWindow("График: Скорость |V|", 1, dockspaceId)) {
     if (!flowValid || flow == nullptr) {
       drawMissingDataText("Нет данных расчёта");
     } else {
@@ -239,7 +242,7 @@ drawChartsPanel(const core::FlowResults* flow, bool flowValid) noexcept
   }
   ImGui::End();
 
-  if (beginChartWindow("График: ψ средней линии", 2)) {
+  if (beginChartWindow("График: ψ средней линии", 2, dockspaceId)) {
     if (!flowValid || flow == nullptr) {
       drawMissingDataText("Нет данных расчёта");
     } else if (flow->areaProfile.arcLengths.empty()) {

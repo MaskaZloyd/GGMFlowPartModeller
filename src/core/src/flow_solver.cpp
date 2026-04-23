@@ -16,6 +16,8 @@ namespace ggm::core {
 
 namespace {
 
+constexpr double kGeometryLengthUnitToMeters = 1e-3;
+
 // Append a point past the polyline's last vertex along its tangent direction
 // so the FEM domain extends a few millimeters past the outlet radius. This
 // lets the stream function boundary "breathe" and removes the outlet-edge
@@ -217,7 +219,8 @@ FlowSolver::solve(const MeridionalGeometry& geom,
   }
 
   std::vector<StreamlineVelocity> velocities;
-  auto velRes = computeStreamlineVelocities(*femResult, streamlines, params.qM3s);
+  auto velRes =
+    computeStreamlineVelocities(*femResult, streamlines, params.qM3s, kGeometryLengthUnitToMeters);
   if (velRes) {
     velocities = std::move(*velRes);
   }

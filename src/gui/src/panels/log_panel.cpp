@@ -7,8 +7,11 @@
 namespace ggm::gui {
 
 void
-drawLogPanel() noexcept
+drawLogPanel(ImGuiID dockspaceId) noexcept
 {
+  if (dockspaceId != 0) {
+    ImGui::SetNextWindowDockID(dockspaceId, ImGuiCond_FirstUseEver);
+  }
   ImGui::Begin("Log");
 
   auto sink = logging::guiSink();

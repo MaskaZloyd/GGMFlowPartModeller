@@ -57,11 +57,16 @@ paramDrag(const char* id,
 } // namespace
 
 ParamsPanelResult
-drawParamsPanel(const core::PumpParams& current, ParamsPanelState& state) noexcept
+drawParamsPanel(const core::PumpParams& current,
+                ParamsPanelState& state,
+                ImGuiID dockspaceId) noexcept
 {
   ParamsPanelResult result;
   result.liveParams = current;
 
+  if (dockspaceId != 0) {
+    ImGui::SetNextWindowDockID(dockspaceId, ImGuiCond_FirstUseEver);
+  }
   ImGui::Begin("Параметры");
 
   if (!state.active) {

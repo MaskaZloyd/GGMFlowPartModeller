@@ -18,6 +18,7 @@ drawGeometryPanel(Fbo& fbo,
                   const core::MeridionalGeometry& geom,
                   const core::FlowResults* flow,
                   const RenderSettings& renderSettings,
-                  bool geometryValid) noexcept;
+                  bool geometryValid,
+                  unsigned int dockspaceId) noexcept;
 
 } // namespace ggm::gui

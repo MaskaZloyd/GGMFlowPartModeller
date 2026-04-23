@@ -56,34 +56,35 @@ Application::run() noexcept
       logging::gui()->info("Расчёт завершён за {} мс", asyncSolver_->lastDuration().count());
     }
 
-    auto actions = buildDockspace(undoStack_.canUndo(), undoStack_.canRedo());
+    auto dockLayout = buildDockspace(undoStack_.canUndo(), undoStack_.canRedo());
     drawStatusBar(
       currentPath_.filename().string(), asyncSolver_->status(), asyncSolver_->lastDuration());
 
-    if (actions.requestNew) {
+    if (dockLayout.actions.requestNew) {
       handleNew();
     }
-    if (actions.requestOpen) {
+    if (dockLayout.actions.requestOpen) {
       handleOpen();
     }
-    if (actions.requestSave) {
+    if (dockLayout.actions.requestSave) {
       handleSave();
     }
-    if (actions.requestSaveAs) {
+    if (dockLayout.actions.requestSaveAs) {
       handleSaveAs();
     }
-    if (actions.requestUndo) {
+    if (dockLayout.actions.requestUndo) {
       handleUndo();
     }
-    if (actions.requestRedo) {
+    if (dockLayout.actions.requestRedo) {
       handleRedo();
     }
-    if (actions.requestQuit) {
+    if (dockLayout.actions.requestQuit) {
       break;
     }
 
     // Parameters panel: fast geometry-only update during drag.
-    auto panelResult = drawParamsPanel(model_.params(), paramsPanelState_);
+    auto panelResult =
+      drawParamsPanel(model_.params(), paramsPanelState_, dockLayout.moduleDockspaceId);
 
     bool liveChanged = !(panelResult.liveParams == model_.params());
     if (liveChanged) {
@@ -114,11 +115,15 @@ Application::run() noexcept
                       model_.geometry(),
                       flowPtr,
                       renderSettings_,
-                      model_.geometryValid());
-    drawChartsPanel(flowPtr, flowValid);
+                      model_.geometryValid(),
+                      dockLayout.moduleDockspaceId);
+    drawChartsPanel(flowPtr, flowValid, dockLayout.moduleDockspaceId);
 
-    auto settingsResult = drawSettingsPanel(
-      model_.compSettings(), renderSettings_, asyncSolver_->status(), asyncSolver_->lastDuration());
+    auto settingsResult = drawSettingsPanel(model_.compSettings(),
+                                            renderSettings_,
+                                            asyncSolver_->status(),
+                                            asyncSolver_->lastDuration(),
+                                            dockLayout.moduleDockspaceId);
     if (settingsResult.renderSettingsChanged) {
       renderSettings_ = settingsResult.renderSettings;
     }
@@ -136,7 +141,7 @@ Application::run() noexcept
       logging::gui()->info("Расчёт отменён");
     }
 
-    drawLogPanel();
+    drawLogPanel(dockLayout.moduleDockspaceId);
 
     window_.endFrame();
   }

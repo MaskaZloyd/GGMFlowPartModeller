@@ -114,12 +114,16 @@ SettingsPanelResult
 drawSettingsPanel(const core::ComputationSettings& compSettings,
                   const RenderSettings& renderSettings,
                   core::SolverStatus solverStatus,
-                  std::chrono::milliseconds lastDuration) noexcept
+                  std::chrono::milliseconds lastDuration,
+                  ImGuiID dockspaceId) noexcept
 {
   SettingsPanelResult result;
   result.compSettings = compSettings;
   result.renderSettings = renderSettings;
 
+  if (dockspaceId != 0) {
+    ImGui::SetNextWindowDockID(dockspaceId, ImGuiCond_FirstUseEver);
+  }
   ImGui::Begin("Настройки");
 
   auto& comp = result.compSettings;

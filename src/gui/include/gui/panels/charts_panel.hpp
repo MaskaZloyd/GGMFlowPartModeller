@@ -8,6 +8,6 @@ namespace ggm::gui {
 
 // Draw dockable chart windows with ImPlot.
 void
-drawChartsPanel(const core::FlowResults* flow, bool flowValid) noexcept;
+drawChartsPanel(const core::FlowResults* flow, bool flowValid, unsigned int dockspaceId) noexcept;
 
 } // namespace ggm::gui
