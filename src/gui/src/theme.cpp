@@ -103,10 +103,30 @@ applyLightTheme()
   auto& ps = ImPlot::GetStyle();
   ps.LineWeight = 1.5F;
   ps.MarkerSize = 4.0F;
+  ps.FillAlpha = 0.9F;
+  ps.PlotBorderSize = 1.0F;
+  ps.MinorAlpha = 0.45F;
+  ps.MajorTickLen = ImVec2(8.0F, 8.0F);
+  ps.MinorTickLen = ImVec2(4.0F, 4.0F);
   ps.PlotPadding = ImVec2(10.0F, 10.0F);
   ps.LabelPadding = ImVec2(6.0F, 4.0F);
   ps.LegendPadding = ImVec2(8.0F, 6.0F);
   ps.LegendInnerPadding = ImVec2(4.0F, 3.0F);
+  ps.LegendSpacing = ImVec2(6.0F, 2.0F);
+  ps.MousePosPadding = ImVec2(10.0F, 10.0F);
+  ps.FitPadding = ImVec2(0.08F, 0.08F);
+  ps.PlotDefaultSize = ImVec2(460.0F, 300.0F);
+  ps.Colors[ImPlotCol_FrameBg] = rgba(0.995F, 0.997F, 1.000F, 1.0F);
+  ps.Colors[ImPlotCol_PlotBg] = rgba(0.982F, 0.987F, 0.996F, 1.0F);
+  ps.Colors[ImPlotCol_PlotBorder] = rgba(0.760F, 0.790F, 0.835F, 0.95F);
+  ps.Colors[ImPlotCol_LegendBg] = rgba(1.000F, 1.000F, 1.000F, 0.92F);
+  ps.Colors[ImPlotCol_LegendBorder] = rgba(0.760F, 0.790F, 0.835F, 0.90F);
+  ps.Colors[ImPlotCol_LegendText] = TEXT;
+  ps.Colors[ImPlotCol_AxisText] = TEXT;
+  ps.Colors[ImPlotCol_AxisTick] = rgba(0.220F, 0.260F, 0.330F, 0.42F);
+  ps.Colors[ImPlotCol_AxisGrid] = rgba(0.300F, 0.360F, 0.450F, 0.18F);
+  ps.Colors[ImPlotCol_InlayText] = TEXT_MUTED;
+  ps.Colors[ImPlotCol_TitleText] = TEXT;
 }
 
 } // namespace ggm::gui
