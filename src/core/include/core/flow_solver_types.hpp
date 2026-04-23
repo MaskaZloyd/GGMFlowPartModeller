@@ -29,6 +29,21 @@ struct Streamline
   double psiLevel = 0.0;
 };
 
+struct VelocitySample
+{
+  math::Vec2 point{0.0, 0.0};    // (z, r)
+  math::Vec2 velocity{0.0, 0.0}; // (v_z, v_r)
+  double speed{0.0};             // sqrt(v_z^2 + v_r^2)
+  double radius{0.0};            // r
+  double arcLength{0.0};         // distance along streamline
+};
+
+struct StreamlineVelocity
+{
+  double psiLevel{0.0};
+  std::vector<VelocitySample> samples;
+};
+
 struct AreaProfile
 {
   std::vector<math::Vec2> midPoints; // equidistant curve (z,r)
@@ -43,6 +58,7 @@ struct FlowResults
 {
   FlowSolution solution;
   std::vector<Streamline> streamlines;
+  std::vector<StreamlineVelocity> velocities;
   AreaProfile areaProfile;
 };
 

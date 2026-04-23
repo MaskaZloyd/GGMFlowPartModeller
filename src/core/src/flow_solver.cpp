@@ -5,6 +5,7 @@
 #include "core/logging.hpp"
 #include "core/streamline_extractor.hpp"
 #include "core/strip_grid.hpp"
+#include "core/velocity_field.hpp"
 #include "math/arc_length.hpp"
 
 #include <cstddef>
@@ -215,9 +216,15 @@ FlowSolver::solve(const MeridionalGeometry& geom,
                            areaResult->f2);
   }
 
+  std::vector<StreamlineVelocity> velocities;
+  auto velRes = computeStreamlineVelocities(*femResult, streamlines, params.qM3s);
+  if (velRes) {
+    velocities = std::move(*velRes);
+  }
   return FlowResults{
     .solution = std::move(*femResult),
     .streamlines = std::move(streamlines),
+    .velocities = std::move(velocities),
     .areaProfile = std::move(*areaResult),
   };
 }

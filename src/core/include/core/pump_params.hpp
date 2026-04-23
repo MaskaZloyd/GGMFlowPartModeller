@@ -41,6 +41,9 @@ struct PumpParams
   // Inlet duct diameter
   double din = 212.0;
 
+  // Design flow rate (m^3/s)
+  double qM3s = 0.5;
+
   auto operator==(const PumpParams&) const -> bool = default;
 };
 
