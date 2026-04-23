@@ -259,18 +259,19 @@ stitch(const std::vector<SegmentRecord>& segments,
 } // namespace
 
 std::vector<double>
-equidistantLevels(int bands) noexcept
+equidistantLevels(int count) noexcept
 {
   std::vector<double> levels;
 
-  if (bands <= 1) {
+  if (count <= 0) {
     return levels;
   }
 
-  levels.reserve(static_cast<std::size_t>(bands - 1));
+  levels.reserve(static_cast<std::size_t>(count));
 
-  for (int k = 1; k < bands; ++k) {
-    levels.push_back(static_cast<double>(k) / static_cast<double>(bands));
+  const double denom = static_cast<double>(count + 1);
+  for (int k = 1; k <= count; ++k) {
+    levels.push_back(static_cast<double>(k) / denom);
   }
 
   return levels;

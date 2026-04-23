@@ -6,7 +6,7 @@
 
 namespace ggm::core {
 
-// Generate n equidistant psi levels in (0,1), symmetric around 0.5.
+// Generate exactly n interior psi levels in (0,1), symmetric around 0.5.
 [[nodiscard]] std::vector<double>
 equidistantLevels(int n) noexcept;
 
