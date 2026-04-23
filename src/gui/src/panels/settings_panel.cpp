@@ -2,6 +2,7 @@
 
 #include "gui/solver_status_display.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 #include <imgui.h>
@@ -9,6 +10,71 @@
 namespace ggm::gui {
 
 namespace {
+
+constexpr float INPUT_WIDTH = 120.0F;
+
+void
+showItemTooltip(const char* tooltip) noexcept
+{
+  if (tooltip != nullptr && ImGui::IsItemHovered()) {
+    ImGui::SetTooltip("%s", tooltip);
+  }
+}
+
+bool
+dragIntField(const char* id,
+             const char* labelText,
+             int* value,
+             int minValue,
+             int maxValue,
+             const char* tooltip = nullptr) noexcept
+{
+  ImGui::PushID(id);
+  ImGui::SetNextItemWidth(INPUT_WIDTH);
+  bool changed = ImGui::DragScalar("##v",
+                                   ImGuiDataType_S32,
+                                   value,
+                                   1.0F,
+                                   &minValue,
+                                   &maxValue,
+                                   "%d",
+                                   ImGuiSliderFlags_AlwaysClamp);
+  *value = std::clamp(*value, minValue, maxValue);
+  ImGui::SameLine();
+  ImGui::AlignTextToFramePadding();
+  ImGui::TextUnformatted(labelText);
+  showItemTooltip(tooltip);
+  ImGui::PopID();
+  return changed;
+}
+
+bool
+dragFloatField(const char* id,
+               const char* labelText,
+               float* value,
+               float minValue,
+               float maxValue,
+               const char* format,
+               const char* tooltip = nullptr) noexcept
+{
+  ImGui::PushID(id);
+  ImGui::SetNextItemWidth(INPUT_WIDTH);
+  bool changed = ImGui::DragScalar("##v",
+                                   ImGuiDataType_Float,
+                                   value,
+                                   0.1F,
+                                   &minValue,
+                                   &maxValue,
+                                   format,
+                                   ImGuiSliderFlags_AlwaysClamp);
+  *value = std::clamp(*value, minValue, maxValue);
+  ImGui::SameLine();
+  ImGui::AlignTextToFramePadding();
+  ImGui::TextUnformatted(labelText);
+  showItemTooltip(tooltip);
+  ImGui::PopID();
+  return changed;
+}
 
 void
 drawStatusIndicator(core::SolverStatus status, std::chrono::milliseconds lastDuration) noexcept
@@ -89,34 +155,31 @@ drawSettingsPanel(const core::ComputationSettings& compSettings,
   ImGui::Separator();
 
   if (ImGui::CollapsingHeader("Расчёт", ImGuiTreeNodeFlags_DefaultOpen)) {
-    ImGui::SliderInt("Точек NURBS", &comp.nurbsEvalPoints, 50, 2000);
-    if (ImGui::IsItemHovered()) {
-      ImGui::SetTooltip("Количество точек для отображения кривых NURBS");
-    }
-
-    ImGui::SliderInt("Сечений вдоль (Nh)", &comp.nh, 50, 500);
-    if (ImGui::IsItemHovered()) {
-      ImGui::SetTooltip("Разрешение сетки вдоль потока");
-    }
-
-    ImGui::SliderInt("Сечений поперёк (M)", &comp.m, 10, 200);
-    if (ImGui::IsItemHovered()) {
-      ImGui::SetTooltip("Разрешение сетки поперёк канала");
-    }
-
-    ImGui::SliderInt("Линий тока", &comp.streamlineCount, 1, 20);
-    if (ImGui::IsItemHovered()) {
-      ImGui::SetTooltip("Количество линий тока между втулкой и покрывным диском");
-    }
+    dragIntField("nurbs_eval_points",
+                 "Точек NURBS",
+                 &comp.nurbsEvalPoints,
+                 50,
+                 2000,
+                 "Количество точек для отображения кривых NURBS");
+    dragIntField("nh", "Сечений вдоль (Nh)", &comp.nh, 50, 500, "Разрешение сетки вдоль потока");
+    dragIntField("m", "Сечений поперёк (M)", &comp.m, 10, 200, "Разрешение сетки поперёк канала");
+    dragIntField("streamline_count",
+                 "Линий тока",
+                 &comp.streamlineCount,
+                 1,
+                 20,
+                 "Количество линий тока между втулкой и покрывным диском");
   }
 
   if (ImGui::CollapsingHeader("Отображение", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::Checkbox("Координатная сетка", &rend.showCoordGrid);
     ImGui::Checkbox("Расчётная сетка", &rend.showComputationalGrid);
-    ImGui::SliderFloat("Толщина втулки", &rend.hubLineWidth, 1.0F, 5.0F, "%.1f");
-    ImGui::SliderFloat("Толщина покр. диска", &rend.shroudLineWidth, 1.0F, 5.0F, "%.1f");
-    ImGui::SliderFloat("Толщина ср. линии", &rend.meanLineWidth, 0.5F, 3.0F, "%.1f");
-    ImGui::SliderFloat("Толщина линий тока", &rend.streamlineWidth, 0.5F, 3.0F, "%.1f");
+    dragFloatField("hub_line_width", "Толщина втулки", &rend.hubLineWidth, 1.0F, 5.0F, "%.1f");
+    dragFloatField(
+      "shroud_line_width", "Толщина покр. диска", &rend.shroudLineWidth, 1.0F, 5.0F, "%.1f");
+    dragFloatField("mean_line_width", "Толщина ср. линии", &rend.meanLineWidth, 0.5F, 3.0F, "%.1f");
+    dragFloatField(
+      "streamline_width", "Толщина линий тока", &rend.streamlineWidth, 0.5F, 3.0F, "%.1f");
   }
 
   ImGui::End();
