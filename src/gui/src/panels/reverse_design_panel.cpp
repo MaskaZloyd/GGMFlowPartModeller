@@ -443,6 +443,31 @@ drawOptimizationSettings(ReverseDesignPanelState& state)
   constexpr double POINT_MAX = 20.0;
   constexpr double SMOOTH_MAX = 0.05;
   constexpr double CONS_MAX = 10000.0;
+  constexpr const char* kAreaWeightTooltip =
+    "Основной вес среднеквадратичной ошибки площади: F_current - F_target.\n"
+    "Увеличивайте, если нужно точнее попасть в целевую кривую площади.";
+  constexpr const char* kTargetPointWeightTooltip =
+    "Дополнительный вес опорных точек целевой кривой.\n"
+    "Увеличивайте, если оптимизация хорошо идет между точками, но промахивается в заданных "
+    "точках.";
+  constexpr const char* kSlopeWeightTooltip =
+    "Вес штрафа за изменение наклона residual между соседними xi.\n"
+    "Увеличивайте, чтобы подавить волны ошибки; слишком большой вес может ухудшить попадание "
+    "по абсолютной площади.";
+  constexpr const char* kMonotonicityWeightTooltip =
+    "Вес штрафа за локальное падение текущей площади там, где целевая кривая не убывает.\n"
+    "Увеличивайте при провалах и перегибах площади; слишком большой вес делает поиск жестче.";
+  constexpr const char* kSmoothnessWeightTooltip =
+    "Вес гладкости геометрии: штрафует вторые разности точек hub и shroud.\n"
+    "Увеличивайте, если стенки становятся слишком резкими; слишком большой вес сглаживает "
+    "ценой точности площади.";
+  constexpr const char* kConstraintWeightTooltip =
+    "Вес технологических и геометрических ограничений: зазоры, радиальные границы, "
+    "положительная площадь, корректные хорды.\n"
+    "Увеличивайте, если оптимизатор находит математически хороший, но недопустимый вариант.";
+  constexpr const char* kInvalidChordTooltip =
+    "Допустимая доля некорректных хорд профиля площади до усиленного штрафа.\n"
+    "Меньшее значение строже отбрасывает сомнительную геометрию.";
 
   fixedDrag("sigma",
             "σ₀ (доля границы)",
@@ -455,40 +480,62 @@ drawOptimizationSettings(ReverseDesignPanelState& state)
 
   ImGui::Spacing();
   ImGui::TextDisabled("Веса в целевой функции");
-  fixedDrag(
-    "aw", "area weight", &opt.areaWeight, &ZERO, &AREA_MAX, "%.3f", 0.01F);
+  fixedDrag("aw",
+            "area weight",
+            &opt.areaWeight,
+            &ZERO,
+            &AREA_MAX,
+            "%.3f",
+            0.01F,
+            kAreaWeightTooltip);
   fixedDrag("tpw",
             "target point weight",
             &opt.targetPointWeight,
             &ZERO,
             &POINT_MAX,
             "%.2f",
-            0.05F);
+            0.05F,
+            kTargetPointWeightTooltip);
   fixedDrag("slope",
             "slope weight",
             &opt.residualSlopeWeight,
             &ZERO,
             &SHAPE_MAX,
             "%.3f",
-            0.01F);
+            0.01F,
+            kSlopeWeightTooltip);
   fixedDrag("mono",
             "monotonicity weight",
             &opt.monotonicityWeight,
             &ZERO,
             &SHAPE_MAX,
             "%.3f",
-            0.05F);
-  fixedDrag(
-    "sw", "smoothness weight", &opt.smoothnessWeight, &ZERO, &SMOOTH_MAX, "%.5f", 0.0005F);
-  fixedDrag(
-    "cw", "constraint weight", &opt.constraintWeight, &ZERO, &CONS_MAX, "%.1f", 5.0F);
+            0.05F,
+            kMonotonicityWeightTooltip);
+  fixedDrag("sw",
+            "smoothness weight",
+            &opt.smoothnessWeight,
+            &ZERO,
+            &SMOOTH_MAX,
+            "%.5f",
+            0.0005F,
+            kSmoothnessWeightTooltip);
+  fixedDrag("cw",
+            "constraint weight",
+            &opt.constraintWeight,
+            &ZERO,
+            &CONS_MAX,
+            "%.1f",
+            5.0F,
+            kConstraintWeightTooltip);
   fixedDrag("chord",
             "max invalid chord",
             &opt.maxInvalidChordFraction,
             &ZERO,
             &ONE,
             "%.2f",
-            0.01F);
+            0.01F,
+            kInvalidChordTooltip);
 }
 
 void
