@@ -48,6 +48,21 @@ ctest --preset release --output-on-failure
 
 Подробнее: [docs/windows-build.md](docs/windows-build.md).
 
+## Распространение
+
+```bash
+make package PRESET=release
+```
+
+ZIP появится в `build/release`. В пакет попадает исполняемый файл и текущий
+`imgui.ini` из корня проекта.
+
+Для папки без архива:
+
+```bash
+make install PRESET=release INSTALL_DIR=dist/GGMFlowPartModeller
+```
+
 ## Структура
 
 - `src/math` - геометрические и численные примитивы.

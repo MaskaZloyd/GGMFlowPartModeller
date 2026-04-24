@@ -78,3 +78,34 @@ if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+install(FILES
+    "${CMAKE_SOURCE_DIR}/README.md"
+    DESTINATION .
+)
+
+install(FILES
+    "${CMAKE_SOURCE_DIR}/imgui.ini"
+    DESTINATION .
+    OPTIONAL
+)
+
+if(MSVC)
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION ".")
+    set(CMAKE_INSTALL_UCRT_LIBRARIES TRUE)
+    include(InstallRequiredSystemLibraries)
+endif()
+
+set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+set(CPACK_PACKAGE_VENDOR "GGM")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+    "Pump flow part modelling and inverse geometry design"
+)
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_GENERATOR "ZIP")
+set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY ON)
+set(CPACK_PACKAGE_FILE_NAME
+    "${PROJECT_NAME}-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
+)
+
+include(CPack)

@@ -9,6 +9,8 @@
 #   make format                -> format project sources in-place
 #   make coverage-report       -> generate HTML coverage report
 #   make conan-install         -> install Conan dependencies only
+#   make install PRESET=release INSTALL_DIR=dist/GGMFlowPartModeller
+#   make package PRESET=release -> create a ZIP package in the build directory
 
 CMAKE          ?= cmake
 CTEST          ?= ctest
@@ -21,6 +23,7 @@ LLVM_COV       ?= llvm-cov
 PRESET                ?= debug
 COVERAGE_PRESET       ?= coverage
 BUILD_DIR             ?= build/$(PRESET)
+INSTALL_DIR           ?= dist/GGMFlowPartModeller
 COVERAGE_BUILD_DIR    ?= build/$(COVERAGE_PRESET)
 COMPILE_COMMANDS_LINK ?= compile_commands.json
 LLVM_PROFILE_FILE     ?= $(COVERAGE_BUILD_DIR)/default.profraw
@@ -45,7 +48,7 @@ LINT_FILES := $(shell find $(LINT_DIRS) -type f \( \
 	-name '*.cc' -o -name '*.cpp' \
 \) 2>/dev/null)
 
-.PHONY: all build configure conan-install rebuild compile-commands \
+.PHONY: all build configure conan-install rebuild compile-commands install package \
         debug release asan tsan ubsan coverage \
         test lint format format-check clean coverage-report help
 
@@ -84,6 +87,12 @@ compile-commands: configure
 		echo "compile_commands.json was not generated for preset '$(PRESET)'."; \
 		exit 1; \
 	fi
+
+install: build
+	$(CMAKE) --install "$(BUILD_DIR)" --prefix "$(INSTALL_DIR)"
+
+package: build
+	$(CMAKE) --build --preset $(PRESET) --target package
 
 debug release asan tsan ubsan coverage:
 	$(MAKE) build PRESET=$@
@@ -166,6 +175,8 @@ help:
 	@echo "  conan-install     Install Conan dependencies for PRESET=<name>"
 	@echo "  rebuild           Clean and build again"
 	@echo "  compile-commands  Refresh root compile_commands.json symlink"
+	@echo "  install           Install runnable app to INSTALL_DIR"
+	@echo "  package           Build ZIP package in the build directory"
 	@echo "  debug             Shorthand for 'make build PRESET=debug'"
 	@echo "  release           Shorthand for 'make build PRESET=release'"
 	@echo "  asan              Shorthand for 'make build PRESET=asan'"
