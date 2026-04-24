@@ -11,6 +11,16 @@ struct FlowResults;
 
 namespace ggm::gui {
 
+void
+drawGeometryPanelWithTitle(const char* windowTitle,
+                           Fbo& fbo,
+                           GeometryRenderer& renderer,
+                           const core::MeridionalGeometry& geom,
+                           const core::FlowResults* flow,
+                           const RenderSettings& renderSettings,
+                           bool geometryValid,
+                           unsigned int dockspaceId) noexcept;
+
 // Draw the 2D geometry viewport panel using FBO rendering.
 void
 drawGeometryPanel(Fbo& fbo,

@@ -1,5 +1,8 @@
 #include "gui/panels/params_panel.hpp"
 
+#include "gui/ui/panel_style.hpp"
+#include "layout/dock_utils.hpp"
+
 #include <algorithm>
 #include <cmath>
 
@@ -9,12 +12,8 @@ namespace ggm::gui {
 
 namespace {
 
-constexpr float INPUT_WIDTH = 120.0F;
-constexpr const char* DRAG_FORMAT = "%.3f";
-
-// Render one parameter row: fixed-width input on the left, full-length
-// label text on the right. Hiding ImGui's default label ("##<id>") frees
-// us from the column-hungry default layout.
+// Thin wrapper around style::fixedDragDouble that pipes widget activation into
+// ParamsPanelState so we can batch the edit into a single undoable command.
 bool
 paramDrag(const char* id,
           const char* labelText,
@@ -24,34 +23,14 @@ paramDrag(const char* id,
           ParamsPanelState& state,
           const char* tooltip = nullptr)
 {
-  ImGui::PushID(id);
-  ImGui::SetNextItemWidth(INPUT_WIDTH);
-
-  float speed = 0.1F;
-  bool changed =
-    ImGui::DragScalar("##v", ImGuiDataType_Double, value, speed, minVal, maxVal, DRAG_FORMAT);
-
-  if (minVal != nullptr && *value < *minVal) {
-    *value = *minVal;
-  }
-  if (maxVal != nullptr && *value > *maxVal) {
-    *value = *maxVal;
-  }
-
-  if (ImGui::IsItemActivated() && !state.active) {
+  const auto result = style::fixedDragDouble(id, labelText, value, minVal, maxVal,
+                                          style::PANEL_DRAG_FORMAT_DOUBLE,
+                                          style::PANEL_DRAG_SPEED_DEFAULT,
+                                          tooltip);
+  if (result.activated && !state.active) {
     state.active = true;
   }
-
-  ImGui::SameLine();
-  ImGui::AlignTextToFramePadding();
-  ImGui::TextUnformatted(labelText);
-
-  if (tooltip != nullptr && ImGui::IsItemHovered()) {
-    ImGui::SetTooltip("%s", tooltip);
-  }
-
-  ImGui::PopID();
-  return changed;
+  return result.changed;
 }
 
 } // namespace
@@ -64,9 +43,8 @@ drawParamsPanel(const core::PumpParams& current,
   ParamsPanelResult result;
   result.liveParams = current;
 
-  if (dockspaceId != 0) {
-    ImGui::SetNextWindowDockID(dockspaceId, ImGuiCond_FirstUseEver);
-  }
+  prepareDockedWindow("Параметры", dockspaceId);
+  style::pushPanelStyle();
   ImGui::Begin("Параметры");
 
   if (!state.active) {
@@ -215,6 +193,7 @@ drawParamsPanel(const core::PumpParams& current,
   }
 
   ImGui::End();
+  style::popPanelStyle();
 
   return result;
 }

@@ -22,11 +22,13 @@ struct DockspaceActions
 struct DockspaceLayout
 {
   DockspaceActions actions;
-  unsigned int moduleDockspaceId = 0;
+  unsigned int rootDockspaceId = 0;
+  unsigned int meridionalDockspaceId = 0;
+  unsigned int reverseDesignDockspaceId = 0;
 };
 
 // Build fullscreen dockspace with main menu bar.
-// Returns requested actions plus the active module dockspace.
+// Returns requested actions plus nested dockspaces for each top-level module.
 [[nodiscard]] DockspaceLayout
 buildDockspace(bool canUndo, bool canRedo) noexcept;
 

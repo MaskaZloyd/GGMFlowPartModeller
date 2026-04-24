@@ -1,6 +1,7 @@
 #include "gui/layout/dockspace.hpp"
 
 #include "gui/solver_status_display.hpp"
+#include "layout/dock_utils.hpp"
 
 #include <cstdio>
 
@@ -13,8 +14,41 @@ namespace {
 
 constexpr const char* ROOT_DOCKSPACE_WINDOW = "##DockspaceRoot";
 constexpr const char* ROOT_DOCKSPACE_NAME = "MainDockSpace";
-constexpr const char* MODULE_WINDOW_TITLE = "Меридианное сечение";
-constexpr const char* MODULE_DOCKSPACE_NAME = "MeridionalSectionDockSpace";
+constexpr const char* MERIDIONAL_MODULE_WINDOW_TITLE = "Меридианное сечение";
+constexpr const char* MERIDIONAL_MODULE_DOCKSPACE_NAME = "MeridionalSectionDockSpace";
+constexpr const char* REVERSE_MODULE_WINDOW_TITLE = "Обратное проектирование";
+constexpr const char* REVERSE_MODULE_DOCKSPACE_NAME = "ReverseDesignDockSpace";
+
+void
+buildRootModulesLayout(ImGuiID dockspaceId) noexcept
+{
+  if (dockspaceId == 0) {
+    return;
+  }
+
+  ImGuiDockNode* node = ImGui::DockBuilderGetNode(dockspaceId);
+  if (node == nullptr) {
+    return;
+  }
+
+  static bool built = false;
+  if (built) {
+    return;
+  }
+  built = true;
+
+  ImGui::DockBuilderRemoveNodeDockedWindows(dockspaceId, true);
+  ImGui::DockBuilderRemoveNodeChildNodes(dockspaceId);
+
+  ImGuiID modulesNode = dockspaceId;
+  ImGuiID logNode =
+    ImGui::DockBuilderSplitNode(modulesNode, ImGuiDir_Down, 0.20F, nullptr, &modulesNode);
+
+  ImGui::DockBuilderDockWindow(MERIDIONAL_MODULE_WINDOW_TITLE, modulesNode);
+  ImGui::DockBuilderDockWindow(REVERSE_MODULE_WINDOW_TITLE, modulesNode);
+  ImGui::DockBuilderDockWindow("Log", logNode);
+  ImGui::DockBuilderFinish(dockspaceId);
+}
 
 void
 buildMeridionalSectionLayout(ImGuiID dockspaceId, ImVec2 size) noexcept
@@ -27,8 +61,6 @@ buildMeridionalSectionLayout(ImGuiID dockspaceId, ImVec2 size) noexcept
   ImGui::DockBuilderSetNodeSize(dockspaceId, size);
 
   ImGuiID geometryNode = dockspaceId;
-  ImGuiID logNode =
-    ImGui::DockBuilderSplitNode(geometryNode, ImGuiDir_Down, 0.24F, nullptr, &geometryNode);
   ImGuiID sidebarNode =
     ImGui::DockBuilderSplitNode(geometryNode, ImGuiDir_Left, 0.24F, nullptr, &geometryNode);
   ImGuiID chartsNode =
@@ -39,7 +71,6 @@ buildMeridionalSectionLayout(ImGuiID dockspaceId, ImVec2 size) noexcept
   ImGui::DockBuilderDockWindow("Параметры", sidebarNode);
   ImGui::DockBuilderDockWindow("Настройки", settingsNode);
   ImGui::DockBuilderDockWindow("Геометрия", geometryNode);
-  ImGui::DockBuilderDockWindow("Log", logNode);
   ImGui::DockBuilderDockWindow("График: Площадь F(s)", chartsNode);
   ImGui::DockBuilderDockWindow("График: Скорость |V|", chartsNode);
   ImGui::DockBuilderDockWindow("График: ψ средней линии", chartsNode);
@@ -47,11 +78,12 @@ buildMeridionalSectionLayout(ImGuiID dockspaceId, ImVec2 size) noexcept
 }
 
 [[nodiscard]] ImGuiID
-drawMeridionalSectionModule(ImGuiID rootDockspaceId) noexcept
+drawModuleWindow(const char* windowTitle,
+                 const char* dockspaceName,
+                 ImGuiID rootDockspaceId,
+                 void (*buildLayout)(ImGuiID, ImVec2)) noexcept
 {
-  if (rootDockspaceId != 0) {
-    ImGui::SetNextWindowDockID(rootDockspaceId, ImGuiCond_FirstUseEver);
-  }
+  prepareDockedWindow(windowTitle, rootDockspaceId);
 
   const ImGuiViewport* viewport = ImGui::GetMainViewport();
   if (viewport != nullptr) {
@@ -62,14 +94,40 @@ drawMeridionalSectionModule(ImGuiID rootDockspaceId) noexcept
     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
 
   ImGuiID moduleDockspaceId = 0;
-  if (ImGui::Begin(MODULE_WINDOW_TITLE, nullptr, moduleFlags)) {
-    moduleDockspaceId = ImGui::GetID(MODULE_DOCKSPACE_NAME);
-    buildMeridionalSectionLayout(moduleDockspaceId, ImGui::GetContentRegionAvail());
-    ImGui::DockSpace(moduleDockspaceId, ImVec2(0.0F, 0.0F));
+  if (ImGui::Begin(windowTitle, nullptr, moduleFlags)) {
+    moduleDockspaceId = ImGui::GetID(dockspaceName);
+    buildLayout(moduleDockspaceId, ImGui::GetContentRegionAvail());
+    const ImGuiWindowClass windowClass = makeDockspaceWindowClass(moduleDockspaceId);
+    ImGui::DockSpace(moduleDockspaceId, ImVec2(0.0F, 0.0F), ImGuiDockNodeFlags_None, &windowClass);
   }
   ImGui::End();
 
   return moduleDockspaceId;
+}
+
+void
+buildReverseDesignLayout(ImGuiID dockspaceId, ImVec2 size) noexcept
+{
+  if (dockspaceId == 0 || ImGui::DockBuilderGetNode(dockspaceId) != nullptr) {
+    return;
+  }
+
+  ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
+  ImGui::DockBuilderSetNodeSize(dockspaceId, size);
+
+  ImGuiID centerNode = dockspaceId;
+  ImGuiID geometryNode =
+    ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Right, 0.42F, nullptr, &centerNode);
+  ImGuiID controlsNode =
+    ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Left, 0.30F, nullptr, &centerNode);
+  ImGuiID comparisonNode =
+    ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Down, 0.45F, nullptr, &centerNode);
+
+  ImGui::DockBuilderDockWindow("Настройки обратного проектирования", controlsNode);
+  ImGui::DockBuilderDockWindow("Целевая кривая площади", centerNode);
+  ImGui::DockBuilderDockWindow("Сравнение площади", comparisonNode);
+  ImGui::DockBuilderDockWindow("Геометрия оптимизации", geometryNode);
+  ImGui::DockBuilderFinish(dockspaceId);
 }
 
 } // namespace
@@ -98,7 +156,10 @@ buildDockspace(bool canUndo, bool canRedo) noexcept
   ImGui::PopStyleVar(3);
 
   ImGuiID dockspaceId = ImGui::GetID(ROOT_DOCKSPACE_NAME);
-  ImGui::DockSpace(dockspaceId, ImVec2(0.0F, 0.0F), ImGuiDockNodeFlags_PassthruCentralNode);
+  const ImGuiWindowClass rootWindowClass = makeDockspaceWindowClass(dockspaceId);
+  ImGui::DockSpace(
+    dockspaceId, ImVec2(0.0F, 0.0F), ImGuiDockNodeFlags_PassthruCentralNode, &rootWindowClass);
+  buildRootModulesLayout(dockspaceId);
 
   // Main menu bar
   if (ImGui::BeginMenuBar()) {
@@ -164,7 +225,15 @@ buildDockspace(bool canUndo, bool canRedo) noexcept
     layout.actions.requestQuit = true;
   }
 
-  layout.moduleDockspaceId = drawMeridionalSectionModule(dockspaceId);
+  layout.rootDockspaceId = dockspaceId;
+  layout.meridionalDockspaceId = drawModuleWindow(MERIDIONAL_MODULE_WINDOW_TITLE,
+                                                  MERIDIONAL_MODULE_DOCKSPACE_NAME,
+                                                  dockspaceId,
+                                                  buildMeridionalSectionLayout);
+  layout.reverseDesignDockspaceId = drawModuleWindow(REVERSE_MODULE_WINDOW_TITLE,
+                                                     REVERSE_MODULE_DOCKSPACE_NAME,
+                                                     dockspaceId,
+                                                     buildReverseDesignLayout);
 
   return layout;
 }

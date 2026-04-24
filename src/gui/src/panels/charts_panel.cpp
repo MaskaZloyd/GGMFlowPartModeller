@@ -1,6 +1,7 @@
 #include "gui/panels/charts_panel.hpp"
 
 #include "core/flow_solver_types.hpp"
+#include "layout/dock_utils.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -79,9 +80,7 @@ setupChartWindow(int cascadeIndex) noexcept
 beginChartWindow(const char* title, int cascadeIndex, ImGuiID dockspaceId) noexcept
 {
   setupChartWindow(cascadeIndex);
-  if (dockspaceId != 0) {
-    ImGui::SetNextWindowDockID(dockspaceId, ImGuiCond_FirstUseEver);
-  }
+  prepareDockedWindow(title, dockspaceId);
   return ImGui::Begin(title);
 }
 

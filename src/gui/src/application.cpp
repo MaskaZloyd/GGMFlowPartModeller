@@ -7,6 +7,7 @@
 #include "gui/panels/geometry_panel.hpp"
 #include "gui/panels/log_panel.hpp"
 #include "gui/panels/params_panel.hpp"
+#include "gui/panels/reverse_design_panel.hpp"
 #include "gui/panels/settings_panel.hpp"
 
 #include <memory>
@@ -82,66 +83,71 @@ Application::run() noexcept
       break;
     }
 
-    // Parameters panel: fast geometry-only update during drag.
-    auto panelResult =
-      drawParamsPanel(model_.params(), paramsPanelState_, dockLayout.moduleDockspaceId);
-
-    bool liveChanged = !(panelResult.liveParams == model_.params());
-    if (liveChanged) {
-      model_.setParams(panelResult.liveParams);
-      if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
-        logging::gui()->warn("Ошибка построения геометрии: {}", core::toString(rebuilt.error()));
-      }
-    }
-
-    if (panelResult.finishedEdit) {
-      undoStack_.push(std::move(*panelResult.finishedEdit));
-      if (!model_.geometryValid()) {
-        logging::gui()->warn("Геометрия не построена с текущими параметрами");
-      } else {
-        // Auto-resubmit so status/time reflects the current parameters.
-        asyncSolver_->submit(model_.geometry(), model_.params(), model_.compSettings());
-      }
-    }
-
     // Take a single snapshot for this frame — keeps result alive even if
     // the worker publishes a new one mid-frame.
     auto flowSnapshot = asyncSolver_->snapshot();
     const core::FlowResults* flowPtr = flowSnapshot.get();
     bool flowValid = flowSnapshot != nullptr;
 
-    drawGeometryPanel(geometryFbo_,
-                      geometryRenderer_,
-                      model_.geometry(),
-                      flowPtr,
-                      renderSettings_,
-                      model_.geometryValid(),
-                      dockLayout.moduleDockspaceId);
-    drawChartsPanel(flowPtr, flowValid, dockLayout.moduleDockspaceId);
+    if (dockLayout.meridionalDockspaceId != 0) {
+      auto panelResult =
+        drawParamsPanel(model_.params(), paramsPanelState_, dockLayout.meridionalDockspaceId);
 
-    auto settingsResult = drawSettingsPanel(model_.compSettings(),
-                                            renderSettings_,
-                                            asyncSolver_->status(),
-                                            asyncSolver_->lastDuration(),
-                                            dockLayout.moduleDockspaceId);
-    if (settingsResult.renderSettingsChanged) {
-      renderSettings_ = settingsResult.renderSettings;
-    }
-    if (settingsResult.compSettingsChanged) {
-      model_.setCompSettings(settingsResult.compSettings);
-    }
-    if (settingsResult.recomputeRequested) {
-      if (model_.geometryValid()) {
-        asyncSolver_->submit(model_.geometry(), model_.params(), model_.compSettings());
-        logging::gui()->info("Запущен расчёт потока");
+      bool liveChanged = !(panelResult.liveParams == model_.params());
+      if (liveChanged) {
+        model_.setParams(panelResult.liveParams);
+        if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
+          logging::gui()->warn("Ошибка построения геометрии: {}", core::toString(rebuilt.error()));
+        }
+      }
+
+      if (panelResult.finishedEdit) {
+        undoStack_.push(std::move(*panelResult.finishedEdit));
+        if (!model_.geometryValid()) {
+          logging::gui()->warn("Геометрия не построена с текущими параметрами");
+        } else {
+          asyncSolver_->submit(model_.geometry(), model_.params(), model_.compSettings());
+        }
+      }
+
+      drawGeometryPanel(geometryFbo_,
+                        geometryRenderer_,
+                        model_.geometry(),
+                        flowPtr,
+                        renderSettings_,
+                        model_.geometryValid(),
+                        dockLayout.meridionalDockspaceId);
+      drawChartsPanel(flowPtr, flowValid, dockLayout.meridionalDockspaceId);
+
+      auto settingsResult = drawSettingsPanel(model_.compSettings(),
+                                              renderSettings_,
+                                              asyncSolver_->status(),
+                                              asyncSolver_->lastDuration(),
+                                              dockLayout.meridionalDockspaceId);
+      if (settingsResult.renderSettingsChanged) {
+        renderSettings_ = settingsResult.renderSettings;
+      }
+      if (settingsResult.compSettingsChanged) {
+        model_.setCompSettings(settingsResult.compSettings);
+      }
+      if (settingsResult.recomputeRequested) {
+        if (model_.geometryValid()) {
+          asyncSolver_->submit(model_.geometry(), model_.params(), model_.compSettings());
+          logging::gui()->info("Запущен расчёт потока");
+        }
+      }
+      if (settingsResult.cancelRequested) {
+        asyncSolver_->cancelAndWait();
+        logging::gui()->info("Расчёт отменён");
       }
     }
-    if (settingsResult.cancelRequested) {
-      asyncSolver_->cancelAndWait();
-      logging::gui()->info("Расчёт отменён");
+
+    if (dockLayout.reverseDesignDockspaceId != 0) {
+      drawReverseDesignPanel(
+        reverseDesignPanelState_, model_.params(), dockLayout.reverseDesignDockspaceId);
     }
 
-    drawLogPanel(dockLayout.moduleDockspaceId);
+    drawLogPanel(dockLayout.rootDockspaceId);
 
     window_.endFrame();
   }

@@ -1,6 +1,7 @@
 #include "gui/panels/log_panel.hpp"
 
 #include "core/logging.hpp"
+#include "layout/dock_utils.hpp"
 
 #include <imgui.h>
 
@@ -9,9 +10,7 @@ namespace ggm::gui {
 void
 drawLogPanel(ImGuiID dockspaceId) noexcept
 {
-  if (dockspaceId != 0) {
-    ImGui::SetNextWindowDockID(dockspaceId, ImGuiCond_FirstUseEver);
-  }
+  prepareDockedWindow("Log", dockspaceId);
   ImGui::Begin("Log");
 
   auto sink = logging::guiSink();

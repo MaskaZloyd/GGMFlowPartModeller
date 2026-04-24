@@ -25,6 +25,8 @@ catch_discover_tests(test_math)
 # ---------------------------------------------------------------------------
 add_executable(test_core
     test_core_geometry.cpp
+    test_core_target_area_curve.cpp
+    test_core_geometry_optimizer.cpp
     test_core_strip_grid.cpp
     test_core_fem_solver.cpp
     test_core_serialization.cpp

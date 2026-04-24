@@ -1,6 +1,8 @@
 #include "gui/panels/settings_panel.hpp"
 
 #include "gui/solver_status_display.hpp"
+#include "gui/ui/panel_style.hpp"
+#include "layout/dock_utils.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -11,16 +13,6 @@ namespace ggm::gui {
 
 namespace {
 
-constexpr float INPUT_WIDTH = 120.0F;
-
-void
-showItemTooltip(const char* tooltip) noexcept
-{
-  if (tooltip != nullptr && ImGui::IsItemHovered()) {
-    ImGui::SetTooltip("%s", tooltip);
-  }
-}
-
 bool
 dragIntField(const char* id,
              const char* labelText,
@@ -29,23 +21,7 @@ dragIntField(const char* id,
              int maxValue,
              const char* tooltip = nullptr) noexcept
 {
-  ImGui::PushID(id);
-  ImGui::SetNextItemWidth(INPUT_WIDTH);
-  bool changed = ImGui::DragScalar("##v",
-                                   ImGuiDataType_S32,
-                                   value,
-                                   1.0F,
-                                   &minValue,
-                                   &maxValue,
-                                   "%d",
-                                   ImGuiSliderFlags_AlwaysClamp);
-  *value = std::clamp(*value, minValue, maxValue);
-  ImGui::SameLine();
-  ImGui::AlignTextToFramePadding();
-  ImGui::TextUnformatted(labelText);
-  showItemTooltip(tooltip);
-  ImGui::PopID();
-  return changed;
+  return style::fixedDragInt(id, labelText, value, minValue, maxValue, tooltip).changed;
 }
 
 bool
@@ -57,23 +33,15 @@ dragFloatField(const char* id,
                const char* format,
                const char* tooltip = nullptr) noexcept
 {
-  ImGui::PushID(id);
-  ImGui::SetNextItemWidth(INPUT_WIDTH);
-  bool changed = ImGui::DragScalar("##v",
-                                   ImGuiDataType_Float,
-                                   value,
-                                   0.1F,
-                                   &minValue,
-                                   &maxValue,
-                                   format,
-                                   ImGuiSliderFlags_AlwaysClamp);
-  *value = std::clamp(*value, minValue, maxValue);
-  ImGui::SameLine();
-  ImGui::AlignTextToFramePadding();
-  ImGui::TextUnformatted(labelText);
-  showItemTooltip(tooltip);
-  ImGui::PopID();
-  return changed;
+  return style::fixedDragFloat(id,
+                               labelText,
+                               value,
+                               minValue,
+                               maxValue,
+                               format,
+                               style::PANEL_DRAG_SPEED_DEFAULT,
+                               tooltip)
+    .changed;
 }
 
 void
@@ -121,9 +89,8 @@ drawSettingsPanel(const core::ComputationSettings& compSettings,
   result.compSettings = compSettings;
   result.renderSettings = renderSettings;
 
-  if (dockspaceId != 0) {
-    ImGui::SetNextWindowDockID(dockspaceId, ImGuiCond_FirstUseEver);
-  }
+  prepareDockedWindow("Настройки", dockspaceId);
+  style::pushPanelStyle();
   ImGui::Begin("Настройки");
 
   auto& comp = result.compSettings;
@@ -134,26 +101,13 @@ drawSettingsPanel(const core::ComputationSettings& compSettings,
   ImGui::SameLine();
   drawStatusIndicator(solverStatus, lastDuration);
 
-  bool running = (solverStatus == core::SolverStatus::Running);
+  const bool running = (solverStatus == core::SolverStatus::Running);
 
-  if (running) {
-    ImGui::BeginDisabled();
-  }
-  if (ImGui::Button("Пересчитать", ImVec2(-1, 30))) {
+  if (style::accentButton("Пересчитать", running)) {
     result.recomputeRequested = true;
   }
-  if (running) {
-    ImGui::EndDisabled();
-  }
-
-  if (!running) {
-    ImGui::BeginDisabled();
-  }
-  if (ImGui::Button("Отменить", ImVec2(-1, 0))) {
+  if (style::dangerButton("Отменить", !running)) {
     result.cancelRequested = true;
-  }
-  if (!running) {
-    ImGui::EndDisabled();
   }
 
   ImGui::Separator();
@@ -187,6 +141,7 @@ drawSettingsPanel(const core::ComputationSettings& compSettings,
   }
 
   ImGui::End();
+  style::popPanelStyle();
 
   result.compSettingsChanged = !(comp == compSettings);
   result.renderSettingsChanged =

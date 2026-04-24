@@ -9,6 +9,9 @@ add_library(core STATIC
     src/area_profile.cpp
     src/flow_solver.cpp
     src/async_flow_solver.cpp
+    src/target_area_curve.cpp
+    src/geometry_optimizer.cpp
+    src/async_geometry_optimizer.cpp
     src/logging.cpp
 )
 

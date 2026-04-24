@@ -5,6 +5,7 @@
 #include "gui/commands/edit_command.hpp"
 #include "gui/commands/undo_stack.hpp"
 #include "gui/panels/params_panel.hpp"
+#include "gui/panels/reverse_design_panel.hpp"
 #include "gui/renderer/fbo.hpp"
 #include "gui/renderer/geometry_renderer.hpp"
 #include "gui/renderer/render_settings.hpp"
@@ -50,6 +51,7 @@ private:
   RenderSettings renderSettings_;
   std::unique_ptr<core::AsyncFlowSolver> asyncSolver_;
   ParamsPanelState paramsPanelState_;
+  ReverseDesignPanelState reverseDesignPanelState_;
 };
 
 } // namespace ggm::gui

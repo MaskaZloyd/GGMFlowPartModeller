@@ -13,6 +13,9 @@ add_library(gui STATIC
     src/panels/charts_panel.cpp
     src/panels/settings_panel.cpp
     src/panels/log_panel.cpp
+    src/panels/reverse_design_panel.cpp
+    src/ui/area_curve_editor.cpp
+    src/ui/panel_style.cpp
     src/backends/imgui_impl_glfw.cpp
     src/backends/imgui_impl_opengl3.cpp
     src/backends/implot/implot.cpp

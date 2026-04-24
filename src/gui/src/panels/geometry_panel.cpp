@@ -1,6 +1,7 @@
 #include "gui/panels/geometry_panel.hpp"
 
 #include "core/geometry.hpp"
+#include "layout/dock_utils.hpp"
 #include "renderer/gl_headers.hpp"
 
 #include <algorithm>
@@ -101,18 +102,17 @@ drawScaleBar(ImDrawList* dl, ImVec2 imgMin, ImVec2 imgMax, const ViewportMap& vp
 } // namespace
 
 void
-drawGeometryPanel(Fbo& fbo,
-                  GeometryRenderer& renderer,
-                  const core::MeridionalGeometry& geom,
-                  const core::FlowResults* flow,
-                  const RenderSettings& renderSettings,
-                  bool geometryValid,
-                  ImGuiID dockspaceId) noexcept
+drawGeometryPanelWithTitle(const char* windowTitle,
+                           Fbo& fbo,
+                           GeometryRenderer& renderer,
+                           const core::MeridionalGeometry& geom,
+                           const core::FlowResults* flow,
+                           const RenderSettings& renderSettings,
+                           bool geometryValid,
+                           ImGuiID dockspaceId) noexcept
 {
-  if (dockspaceId != 0) {
-    ImGui::SetNextWindowDockID(dockspaceId, ImGuiCond_FirstUseEver);
-  }
-  ImGui::Begin("Геометрия");
+  prepareDockedWindow(windowTitle, dockspaceId);
+  ImGui::Begin(windowTitle);
 
   ImVec2 avail = ImGui::GetContentRegionAvail();
   int panelWidth = static_cast<int>(avail.x);
@@ -151,6 +151,19 @@ drawGeometryPanel(Fbo& fbo,
   }
 
   ImGui::End();
+}
+
+void
+drawGeometryPanel(Fbo& fbo,
+                  GeometryRenderer& renderer,
+                  const core::MeridionalGeometry& geom,
+                  const core::FlowResults* flow,
+                  const RenderSettings& renderSettings,
+                  bool geometryValid,
+                  ImGuiID dockspaceId) noexcept
+{
+  drawGeometryPanelWithTitle(
+    "Геометрия", fbo, renderer, geom, flow, renderSettings, geometryValid, dockspaceId);
 }
 
 } // namespace ggm::gui
