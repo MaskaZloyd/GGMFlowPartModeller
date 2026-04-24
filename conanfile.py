@@ -9,6 +9,7 @@ class GGMFlowPartModellerConan(ConanFile):
         self.requires("imgui/1.92.6-docking")
 
         self.requires("glfw/3.4")
+        self.requires("glew/2.2.0")
         self.requires("eigen/3.4.0")
         self.requires("opengl/system")
         self.requires("nlohmann_json/3.11.3")
@@ -19,8 +20,10 @@ class GGMFlowPartModellerConan(ConanFile):
         self.test_requires("catch2/3.14.0")
 
     def configure(self):
+        self.options["glew"].shared = False
         self.options["onetbb"].shared = False
-        self.options["hwloc"].shared = True
+        if str(self.settings.os) != "Windows":
+            self.options["hwloc"].shared = True
         # Use std::format instead of fmt — sidesteps a clang/C++23/fmt 10
         # consteval-checking incompatibility that rejects some of spdlog's
         # internal format strings.

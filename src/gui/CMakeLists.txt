@@ -31,5 +31,7 @@ target_include_directories(gui
 
 target_link_libraries(gui
     PUBLIC  core
-    PRIVATE imgui::imgui glfw opengl::opengl
+    PRIVATE imgui::imgui glfw GLEW::GLEW opengl::opengl
 )
+
+target_compile_definitions(gui PRIVATE GLFW_INCLUDE_NONE)

@@ -17,18 +17,28 @@ set_property(CACHE SANITIZER PROPERTY STRINGS "" address thread undefined)
 option(ENABLE_COVERAGE "Enable LLVM source-based code coverage" OFF)
 option(BUILD_TESTS "Build test suite" ON)
 
-add_compile_options(
-    -Wall
-    -Wextra
-    -Wpedantic
-    -Wconversion
-    -Wshadow
-    -Wnon-virtual-dtor
-    -fno-omit-frame-pointer
-)
+if(WIN32)
+    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
+endif()
+
+if(MSVC)
+    add_compile_options(/W4 /permissive- /Zc:__cplusplus /utf-8)
+else()
+    add_compile_options(
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wconversion
+        -Wshadow
+        -Wnon-virtual-dtor
+        -fno-omit-frame-pointer
+    )
+endif()
 
 # Sanitizers
-if(SANITIZER STREQUAL "address")
+if(NOT SANITIZER STREQUAL "" AND MSVC)
+    message(FATAL_ERROR "SANITIZER presets are supported only with GCC/Clang-style toolchains")
+elseif(SANITIZER STREQUAL "address")
     add_compile_options(-fsanitize=address,leak)
     add_link_options(-fsanitize=address,leak)
 elseif(SANITIZER STREQUAL "thread")
@@ -44,6 +54,9 @@ endif()
 
 # Coverage
 if(ENABLE_COVERAGE)
+    if(MSVC)
+        message(FATAL_ERROR "ENABLE_COVERAGE is supported only with LLVM/GCC-style toolchains")
+    endif()
     add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
     add_link_options(-fprofile-instr-generate)
 endif()
@@ -51,6 +64,7 @@ endif()
 # External dependencies (provided by Conan)
 find_package(imgui REQUIRED)
 find_package(glfw3 REQUIRED)
+find_package(GLEW REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(opengl_system REQUIRED)
 find_package(nlohmann_json REQUIRED)
