@@ -10,6 +10,7 @@
 #include <cstdarg>
 #include <limits>
 #include <numbers>
+#include <optional>
 #include <span>
 #include <string>
 #include <utility>
@@ -334,7 +335,7 @@ drawBoundsEditor(ReverseDesignPanelState& state, const bool disabled)
   ImGui::EndDisabled();
 }
 
-void
+[[nodiscard]] std::optional<core::PumpParams>
 drawSourceSection(ReverseDesignPanelState& state,
                   const core::PumpParams& meridionalParams,
                   const bool optimizing)
@@ -344,13 +345,20 @@ drawSourceSection(ReverseDesignPanelState& state,
     previewCurrentGeometry(state);
   }
 
+  std::optional<core::PumpParams> paramsForMeridional;
+  const bool canApplyToMeridional = state.hasCurrentParams && !optimizing;
+  if (style::accentButton("Передать геометрию в меридианное сечение", !canApplyToMeridional)) {
+    paramsForMeridional = state.currentParams;
+    state.statusMessage = "Геометрия передана в меридианное сечение.";
+  }
+
   ImGui::Spacing();
 
   if (!state.hasCurrentParams) {
     ImGui::TextColored(style::PANEL_COLOR_INFO,
                        "Геометрия пока не импортирована. Нажмите кнопку выше, чтобы забрать "
                        "параметры из вкладки \"Меридианное сечение\".");
-    return;
+    return paramsForMeridional;
   }
 
   const ImGuiTableFlags tableFlags =
@@ -374,6 +382,8 @@ drawSourceSection(ReverseDesignPanelState& state,
   }
   ImGui::TextDisabled(
     "Размеры (мм). D₂, Dvt, xa фиксируются; din можно включить в оптимизацию (din > Dvt).");
+
+  return paramsForMeridional;
 }
 
 void
@@ -574,11 +584,13 @@ drawDiagnostics(const ReverseDesignPanelState& state)
   }
 }
 
-void
+[[nodiscard]] ReverseDesignPanelResult
 drawControlsWindow(ReverseDesignPanelState& state,
                    const core::PumpParams& meridionalParams,
                    const unsigned int dockspaceId)
 {
+  ReverseDesignPanelResult result;
+
   prepareDockedWindow(kControlsWindowTitle, dockspaceId);
   style::pushPanelStyle();
   ImGui::Begin(kControlsWindowTitle);
@@ -591,7 +603,7 @@ drawControlsWindow(ReverseDesignPanelState& state,
   ImGui::Separator();
 
   if (ImGui::CollapsingHeader("Источник геометрии", ImGuiTreeNodeFlags_DefaultOpen)) {
-    drawSourceSection(state, meridionalParams, optimizing);
+    result.paramsForMeridional = drawSourceSection(state, meridionalParams, optimizing);
   }
 
   if (ImGui::CollapsingHeader("Действия", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -616,6 +628,8 @@ drawControlsWindow(ReverseDesignPanelState& state,
 
   ImGui::End();
   style::popPanelStyle();
+
+  return result;
 }
 
 void
@@ -740,14 +754,15 @@ drawComparisonWindow(ReverseDesignPanelState& state, const unsigned int dockspac
 
 } // namespace
 
-void
+ReverseDesignPanelResult
 drawReverseDesignPanel(ReverseDesignPanelState& state,
                        const core::PumpParams& meridionalParams,
                        const unsigned int dockspaceId)
 {
   setDefaultCurveIfNeeded(state.editorState);
+  pollOptimization(state);
 
-  drawControlsWindow(state, meridionalParams, dockspaceId);
+  auto result = drawControlsWindow(state, meridionalParams, dockspaceId);
   drawCurveWindow(state, dockspaceId);
 
   if (state.editorState.requestPreview) {
@@ -762,8 +777,6 @@ drawReverseDesignPanel(ReverseDesignPanelState& state,
     submitOptimization(state);
   }
 
-  pollOptimization(state);
-
   drawGeometryPanelWithTitle(kGeometryWindowTitle,
                              state.previewFbo,
                              state.previewRenderer,
@@ -774,6 +787,8 @@ drawReverseDesignPanel(ReverseDesignPanelState& state,
                              state.hasPreview,
                              dockspaceId);
   drawComparisonWindow(state, dockspaceId);
+
+  return result;
 }
 
 } // namespace ggm::gui

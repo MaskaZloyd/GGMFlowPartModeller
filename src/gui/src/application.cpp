@@ -144,8 +144,11 @@ Application::run() noexcept
     }
 
     if (dockLayout.reverseDesignDockspaceId != 0) {
-      drawReverseDesignPanel(
+      auto reverseResult = drawReverseDesignPanel(
         reverseDesignPanelState_, model_.params(), dockLayout.reverseDesignDockspaceId);
+      if (reverseResult.paramsForMeridional) {
+        applyReverseDesignParams(*reverseResult.paramsForMeridional);
+      }
     }
 
     drawLogPanel(dockLayout.rootDockspaceId);
@@ -247,6 +250,32 @@ Application::handleNew() noexcept
   });
   currentPath_.clear();
   logging::gui()->info("Новый проект");
+}
+
+void
+Application::applyReverseDesignParams(const core::PumpParams& params) noexcept
+{
+  if (params == model_.params()) {
+    logging::gui()->info("Геометрия обратного проектирования уже совпадает с меридианной");
+    return;
+  }
+
+  const auto oldParams = model_.params();
+  model_.setParams(params);
+  if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
+    logging::gui()->warn("Ошибка построения геометрии: {}", core::toString(rebuilt.error()));
+  }
+
+  undoStack_.push(EditCommand{
+    .before = oldParams,
+    .after = params,
+    .label = "Импорт из обратного проектирования",
+  });
+
+  if (model_.geometryValid()) {
+    asyncSolver_->submit(model_.geometry(), model_.params(), model_.compSettings());
+  }
+  logging::gui()->info("Геометрия импортирована из обратного проектирования");
 }
 
 } // namespace ggm::gui

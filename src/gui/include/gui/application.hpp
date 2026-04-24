@@ -42,6 +42,7 @@ private:
   void handleSaveAs() noexcept;
   void handleOpen() noexcept;
   void handleNew() noexcept;
+  void applyReverseDesignParams(const core::PumpParams& params) noexcept;
 
   AppWindow window_;
   core::PumpModel model_;

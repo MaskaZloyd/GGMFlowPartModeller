@@ -10,6 +10,7 @@
 #include "gui/ui/area_curve_editor.hpp"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -48,7 +49,12 @@ struct ReverseDesignPanelState
   GeometryPanelState previewPanelState;
 };
 
-void
+struct ReverseDesignPanelResult
+{
+  std::optional<core::PumpParams> paramsForMeridional;
+};
+
+[[nodiscard]] ReverseDesignPanelResult
 drawReverseDesignPanel(ReverseDesignPanelState& state,
                        const core::PumpParams& meridionalParams,
                        unsigned int dockspaceId);
