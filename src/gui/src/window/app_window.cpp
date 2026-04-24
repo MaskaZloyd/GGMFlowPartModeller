@@ -1,6 +1,7 @@
 #include "gui/window/app_window.hpp"
 
 #include "gui/theme.hpp"
+#include "renderer/gl_headers.hpp"
 
 #include <GLFW/glfw3.h>
 #include <imgui.h>
@@ -33,6 +34,18 @@ AppWindow::create(WindowConfig cfg) noexcept
 
   glfwMakeContextCurrent(win);
   glfwSwapInterval(1);
+
+  glewExperimental = GL_TRUE;
+  const GLenum glewError = glewInit();
+  if (glewError != GLEW_OK) {
+    std::string error = "Failed to initialize GLEW: ";
+    error += reinterpret_cast<const char*>(glewGetErrorString(glewError));
+    glfwDestroyWindow(win);
+    glfwTerminate();
+    return std::unexpected(std::move(error));
+  }
+  // GLEW may leave a benign GL_INVALID_ENUM while probing a core profile.
+  (void)glGetError();
 
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
