@@ -4,6 +4,7 @@
 #include "core/pump_model.hpp"
 #include "gui/commands/edit_command.hpp"
 #include "gui/commands/undo_stack.hpp"
+#include "gui/panels/geometry_panel.hpp"
 #include "gui/panels/params_panel.hpp"
 #include "gui/panels/reverse_design_panel.hpp"
 #include "gui/renderer/fbo.hpp"
@@ -47,6 +48,7 @@ private:
   UndoStack undoStack_;
   Fbo geometryFbo_;
   GeometryRenderer geometryRenderer_;
+  GeometryPanelState geometryPanelState_;
   std::filesystem::path currentPath_;
   RenderSettings renderSettings_;
   std::unique_ptr<core::AsyncFlowSolver> asyncSolver_;

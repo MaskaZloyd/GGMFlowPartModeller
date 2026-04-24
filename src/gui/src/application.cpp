@@ -112,6 +112,7 @@ Application::run() noexcept
 
       drawGeometryPanel(geometryFbo_,
                         geometryRenderer_,
+                        geometryPanelState_,
                         model_.geometry(),
                         flowPtr,
                         renderSettings_,

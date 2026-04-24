@@ -49,6 +49,8 @@ private:
   unsigned int shaderProgram_ = 0;
   int viewportUniformLocation_ = -1;
   int colorUniformLocation_ = -1;
+  int useVertexColorUniformLocation_ = -1;
+  int alphaUniformLocation_ = -1;
   float maxLineWidth_ = 1.0F;
   std::vector<float> scratchVertices_;
 };

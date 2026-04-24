@@ -132,6 +132,12 @@ drawSettingsPanel(const core::ComputationSettings& compSettings,
   if (ImGui::CollapsingHeader("Отображение", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::Checkbox("Координатная сетка", &rend.showCoordGrid);
     ImGui::Checkbox("Расчётная сетка", &rend.showComputationalGrid);
+    ImGui::Checkbox("Тепловая карта |V|", &rend.showVelocityHeatmap);
+    ImGui::Checkbox("Цвет л.тока по |V|", &rend.colorStreamlinesBySpeed);
+    ImGui::Checkbox("Критические точки (вход/выход)", &rend.showCriticalMarkers);
+    ImGui::Checkbox("Hover-инспектор", &rend.showHoverInspector);
+    ImGui::Checkbox("Наложить снимок", &rend.showSnapshotOverlay);
+    ImGui::Separator();
     dragFloatField("hub_line_width", "Толщина втулки", &rend.hubLineWidth, 1.0F, 5.0F, "%.1f");
     dragFloatField(
       "shroud_line_width", "Толщина покр. диска", &rend.shroudLineWidth, 1.0F, 5.0F, "%.1f");
@@ -147,6 +153,11 @@ drawSettingsPanel(const core::ComputationSettings& compSettings,
   result.renderSettingsChanged =
     (rend.showCoordGrid != renderSettings.showCoordGrid) ||
     (rend.showComputationalGrid != renderSettings.showComputationalGrid) ||
+    (rend.showVelocityHeatmap != renderSettings.showVelocityHeatmap) ||
+    (rend.colorStreamlinesBySpeed != renderSettings.colorStreamlinesBySpeed) ||
+    (rend.showCriticalMarkers != renderSettings.showCriticalMarkers) ||
+    (rend.showHoverInspector != renderSettings.showHoverInspector) ||
+    (rend.showSnapshotOverlay != renderSettings.showSnapshotOverlay) ||
     (rend.hubLineWidth != renderSettings.hubLineWidth) ||
     (rend.shroudLineWidth != renderSettings.shroudLineWidth) ||
     (rend.meanLineWidth != renderSettings.meanLineWidth) ||

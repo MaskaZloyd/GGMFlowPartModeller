@@ -22,20 +22,30 @@ using VertexSpan = std::span<const float>;
 constexpr std::string_view kVertexShaderSource = R"glsl(
 #version 330 core
 layout(location = 0) in vec2 aPos;
-uniform vec4 uViewport;  // (minZ, minR, rangeZ, rangeR)
+layout(location = 1) in vec3 aColor;
+uniform vec4 uViewport;      // (minZ, minR, rangeZ, rangeR)
+uniform int  uUseVertexColor; // 0 = use uColor, 1 = use aColor
+out vec3 vColor;
 void main() {
     float ndcX = 2.0 * (aPos.x - uViewport.x) / uViewport.z - 1.0;
     float ndcY = 2.0 * (aPos.y - uViewport.y) / uViewport.w - 1.0;
     gl_Position = vec4(ndcX, ndcY, 0.0, 1.0);
+    vColor = aColor;
+    // Silence warnings when not used.
+    if (uUseVertexColor == 0) { vColor = vec3(0.0); }
 }
 )glsl";
 
 constexpr std::string_view kFragmentShaderSource = R"glsl(
 #version 330 core
+in  vec3 vColor;
 uniform vec3 uColor;
+uniform int  uUseVertexColor;
+uniform float uAlpha;
 out vec4 FragColor;
 void main() {
-    FragColor = vec4(uColor, 1.0);
+    vec3 c = (uUseVertexColor == 1) ? vColor : uColor;
+    FragColor = vec4(c, uAlpha);
 }
 )glsl";
 
@@ -54,7 +64,7 @@ struct Rgb
 constexpr auto kMinorGridColor = Rgb{0.900F, 0.905F, 0.915F};
 constexpr auto kMajorGridColor = Rgb{0.780F, 0.790F, 0.810F};
 constexpr auto kComputationalGridColor = Rgb{0.550F, 0.620F, 0.710F};
-constexpr auto kMeanLineColor = Rgb{0.30F, 0.62F, 0.30F};
+constexpr auto kMeanLineColor = Rgb{0.08F, 0.09F, 0.12F};
 constexpr auto kHubColor = Rgb{0.780F, 0.200F, 0.180F};
 constexpr auto kShroudColor = Rgb{0.180F, 0.360F, 0.780F};
 
@@ -177,27 +187,35 @@ struct RenderViewport
   }
 };
 
+struct DrawUniforms
+{
+  GLint viewport = -1;
+  GLint color = -1;
+  GLint useVertexColor = -1;
+  GLint alpha = -1;
+};
+
 class DrawSession
 {
 public:
   DrawSession(const GLuint shaderProgram,
               const GLuint vao,
               const GLuint vbo,
-              const GLint viewportUniformLocation,
-              const GLint colorUniformLocation,
+              const DrawUniforms uniforms,
               const float maxLineWidth,
               std::vector<float>& scratchVertices) noexcept
     : shaderProgram_(shaderProgram),
       vao_(vao),
       vbo_(vbo),
-      viewportUniformLocation_(viewportUniformLocation),
-      colorUniformLocation_(colorUniformLocation),
+      uniforms_(uniforms),
       maxLineWidth_(maxLineWidth),
       scratchVertices_(scratchVertices)
   {
     glUseProgram(shaderProgram_);
     glBindVertexArray(vao_);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+    setUseVertexColor(false);
+    setAlpha(1.0F);
   }
 
   ~DrawSession()
@@ -215,7 +233,7 @@ public:
 
   void setViewport(const RenderViewport& viewport) const noexcept
   {
-    glUniform4f(viewportUniformLocation_,
+    glUniform4f(uniforms_.viewport,
                 static_cast<float>(viewport.bounds.minZ),
                 static_cast<float>(viewport.bounds.minR),
                 static_cast<float>(viewport.rangeZ),
@@ -224,7 +242,31 @@ public:
 
   void setColor(const Rgb color) const noexcept
   {
-    glUniform3f(colorUniformLocation_, color.r, color.g, color.b);
+    glUniform3f(uniforms_.color, color.r, color.g, color.b);
+  }
+
+  void setAlpha(const float alpha) const noexcept { glUniform1f(uniforms_.alpha, alpha); }
+
+  void setUseVertexColor(const bool enabled) const noexcept
+  {
+    glUniform1i(uniforms_.useVertexColor, enabled ? 1 : 0);
+    if (enabled) {
+      // Interleaved layout: 2 floats pos + 3 floats color.
+      glVertexAttribPointer(
+        0, 2, GL_FLOAT, GL_FALSE, 5 * static_cast<GLsizei>(sizeof(float)), nullptr);
+      glVertexAttribPointer(1,
+                            3,
+                            GL_FLOAT,
+                            GL_FALSE,
+                            5 * static_cast<GLsizei>(sizeof(float)),
+                            reinterpret_cast<const void*>(2 * sizeof(float)));
+      glEnableVertexAttribArray(1);
+    } else {
+      // Position-only layout: 2 floats per vertex.
+      glVertexAttribPointer(
+        0, 2, GL_FLOAT, GL_FALSE, 2 * static_cast<GLsizei>(sizeof(float)), nullptr);
+      glDisableVertexAttribArray(1);
+    }
   }
 
   void setLineWidth(const float width) const noexcept
@@ -245,12 +287,22 @@ public:
       scratchVertices_.push_back(static_cast<float>(point.y()));
     }
 
-    drawVertices(scratchVertices_, mode);
+    drawVertices(scratchVertices_, mode, 2);
   }
 
-  void drawVertices(const VertexSpan vertices, const GLenum mode) const noexcept
+  // Draws from interleaved [pos_x, pos_y, r, g, b] vertices. `mode` =
+  // GL_LINE_STRIP / GL_TRIANGLES / etc. Caller must have enabled vertex
+  // color via setUseVertexColor(true).
+  void drawColoredVertices(const VertexSpan vertices, const GLenum mode) const noexcept
   {
-    if (vertices.empty()) {
+    drawVertices(vertices, mode, 5);
+  }
+
+  void drawVertices(const VertexSpan vertices,
+                    const GLenum mode,
+                    const std::size_t floatsPerVertex = 2U) const noexcept
+  {
+    if (vertices.empty() || floatsPerVertex == 0U) {
       return;
     }
 
@@ -258,7 +310,7 @@ public:
                  static_cast<GLsizeiptr>(vertices.size_bytes()),
                  vertices.data(),
                  GL_DYNAMIC_DRAW);
-    glDrawArrays(mode, 0, static_cast<GLsizei>(vertices.size() / 2U));
+    glDrawArrays(mode, 0, static_cast<GLsizei>(vertices.size() / floatsPerVertex));
   }
 
   [[nodiscard]] std::vector<float>& scratch() const noexcept { return scratchVertices_; }
@@ -267,8 +319,7 @@ private:
   GLuint shaderProgram_ = 0;
   GLuint vao_ = 0;
   GLuint vbo_ = 0;
-  GLint viewportUniformLocation_ = -1;
-  GLint colorUniformLocation_ = -1;
+  DrawUniforms uniforms_{};
   float maxLineWidth_ = kDefaultLineWidth;
   std::vector<float>& scratchVertices_;
 };
@@ -429,17 +480,125 @@ drawComputationalGrid(const core::FlowResults& flow, const DrawSession& drawSess
   drawSession.drawVertices(vertices, GL_LINES);
 }
 
+[[nodiscard]] double
+maxStreamlineSpeed(const core::FlowResults& flow) noexcept
+{
+  double peak = 0.0;
+  for (const auto& vel : flow.velocities) {
+    for (const auto& sample : vel.samples) {
+      peak = std::max(peak, sample.speed);
+    }
+  }
+  return peak > 0.0 ? peak : 1.0;
+}
+
+// Append [x, y, r, g, b] to `out`.
+inline void
+appendColoredVertex(std::vector<float>& out, double x, double y, Rgb color)
+{
+  out.push_back(static_cast<float>(x));
+  out.push_back(static_cast<float>(y));
+  out.push_back(color.r);
+  out.push_back(color.g);
+  out.push_back(color.b);
+}
+
+// Renders the full FEM channel as a filled triangle mesh (grid.triangles),
+// each node tinted by the |V| of its nearest streamline sample. This fills
+// the entire region between hub and shroud — including the narrow bands
+// the per-streamline strips used to miss.
+void
+drawVelocityHeatmap(const core::FlowResults& flow,
+                    double peakSpeed,
+                    const DrawSession& drawSession) noexcept
+{
+  const auto& grid = flow.solution.grid;
+  if (grid.nodes.empty() || grid.triangles.empty() || flow.velocities.empty() ||
+      peakSpeed <= 0.0) {
+    return;
+  }
+
+  // Per-node speed via nearest streamline sample. O(N·M) per frame; for
+  // the current grid sizes (nh·m ≈ 7k nodes × ≈500 samples ≈ 3.5M distance
+  // checks) this is a few ms on a modern CPU — acceptable on the UI thread.
+  std::vector<float> nodeSpeed(grid.nodes.size(), 0.0F);
+  for (std::size_t n = 0; n < grid.nodes.size(); ++n) {
+    const auto& node = grid.nodes[n];
+    double bestSq = std::numeric_limits<double>::max();
+    double bestSpeed = 0.0;
+    for (const auto& vel : flow.velocities) {
+      for (const auto& sample : vel.samples) {
+        const double dz = sample.point.x() - node.x();
+        const double dr = sample.point.y() - node.y();
+        const double d2 = (dz * dz) + (dr * dr);
+        if (d2 < bestSq) {
+          bestSq = d2;
+          bestSpeed = sample.speed;
+        }
+      }
+    }
+    nodeSpeed[n] = static_cast<float>(bestSpeed);
+  }
+
+  drawSession.setUseVertexColor(true);
+  drawSession.setAlpha(0.55F);
+
+  auto& vertices = drawSession.scratch();
+  vertices.clear();
+  vertices.reserve(grid.triangles.size() * 3U * 5U);
+
+  for (const auto& tri : grid.triangles) {
+    for (int corner = 0; corner < 3; ++corner) {
+      const int idx = tri[static_cast<std::size_t>(corner)];
+      if (idx < 0 || static_cast<std::size_t>(idx) >= grid.nodes.size()) {
+        continue;
+      }
+      const auto& p = grid.nodes[static_cast<std::size_t>(idx)];
+      const float t = std::clamp(
+        nodeSpeed[static_cast<std::size_t>(idx)] / static_cast<float>(peakSpeed), 0.0F, 1.0F);
+      appendColoredVertex(vertices, p.x(), p.y(), viridisColor(t));
+    }
+  }
+
+  drawSession.drawColoredVertices(vertices, GL_TRIANGLES);
+
+  drawSession.setAlpha(1.0F);
+  drawSession.setUseVertexColor(false);
+}
+
 void
 drawStreamlines(const core::FlowResults& flow,
                 const RenderSettings& settings,
-                const DrawSession& drawSession) noexcept
+                const DrawSession& drawSession,
+                double peakSpeed) noexcept
 {
   drawSession.setLineWidth(settings.streamlineWidth + 0.4F);
+
+  if (settings.colorStreamlinesBySpeed && !flow.velocities.empty()) {
+    drawSession.setUseVertexColor(true);
+
+    auto& vertices = drawSession.scratch();
+    for (const auto& vel : flow.velocities) {
+      if (vel.samples.size() < 2U) {
+        continue;
+      }
+      vertices.clear();
+      vertices.reserve(vel.samples.size() * 5U);
+      for (const auto& sample : vel.samples) {
+        const auto t = static_cast<float>(std::clamp(sample.speed / peakSpeed, 0.0, 1.0));
+        appendColoredVertex(vertices, sample.point.x(), sample.point.y(), viridisColor(t));
+      }
+      drawSession.drawColoredVertices(vertices, GL_LINE_STRIP);
+    }
+
+    drawSession.setUseVertexColor(false);
+    return;
+  }
+
   for (const auto& streamline : flow.streamlines) {
     if (streamline.points.size() < 2U) {
       continue;
     }
-
     drawSession.setColor(viridisColor(static_cast<float>(streamline.psiLevel)));
     drawSession.drawPolyline(streamline.points);
   }
@@ -509,6 +668,8 @@ GeometryRenderer::GeometryRenderer(GeometryRenderer&& other) noexcept
     shaderProgram_(std::exchange(other.shaderProgram_, 0U)),
     viewportUniformLocation_(std::exchange(other.viewportUniformLocation_, -1)),
     colorUniformLocation_(std::exchange(other.colorUniformLocation_, -1)),
+    useVertexColorUniformLocation_(std::exchange(other.useVertexColorUniformLocation_, -1)),
+    alphaUniformLocation_(std::exchange(other.alphaUniformLocation_, -1)),
     maxLineWidth_(std::exchange(other.maxLineWidth_, kDefaultLineWidth))
 {
 }
@@ -523,6 +684,8 @@ GeometryRenderer::operator=(GeometryRenderer&& other) noexcept
     shaderProgram_ = std::exchange(other.shaderProgram_, 0U);
     viewportUniformLocation_ = std::exchange(other.viewportUniformLocation_, -1);
     colorUniformLocation_ = std::exchange(other.colorUniformLocation_, -1);
+    useVertexColorUniformLocation_ = std::exchange(other.useVertexColorUniformLocation_, -1);
+    alphaUniformLocation_ = std::exchange(other.alphaUniformLocation_, -1);
     maxLineWidth_ = std::exchange(other.maxLineWidth_, kDefaultLineWidth);
   }
   return *this;
@@ -532,7 +695,8 @@ bool
 GeometryRenderer::isReady() const noexcept
 {
   return vao_ != 0U && vbo_ != 0U && shaderProgram_ != 0U && viewportUniformLocation_ >= 0 &&
-         colorUniformLocation_ >= 0;
+         colorUniformLocation_ >= 0 && useVertexColorUniformLocation_ >= 0 &&
+         alphaUniformLocation_ >= 0;
 }
 
 void
@@ -575,7 +739,11 @@ GeometryRenderer::initGl() noexcept
 
   const auto viewportUniformLocation = glGetUniformLocation(shaderProgram, "uViewport");
   const auto colorUniformLocation = glGetUniformLocation(shaderProgram, "uColor");
-  if (viewportUniformLocation < 0 || colorUniformLocation < 0) {
+  const auto useVertexColorUniformLocation =
+    glGetUniformLocation(shaderProgram, "uUseVertexColor");
+  const auto alphaUniformLocation = glGetUniformLocation(shaderProgram, "uAlpha");
+  if (viewportUniformLocation < 0 || colorUniformLocation < 0 ||
+      useVertexColorUniformLocation < 0 || alphaUniformLocation < 0) {
     glDeleteProgram(shaderProgram);
     return;
   }
@@ -611,6 +779,8 @@ GeometryRenderer::initGl() noexcept
   shaderProgram_ = shaderProgram;
   viewportUniformLocation_ = viewportUniformLocation;
   colorUniformLocation_ = colorUniformLocation;
+  useVertexColorUniformLocation_ = useVertexColorUniformLocation;
+  alphaUniformLocation_ = alphaUniformLocation;
   maxLineWidth_ = std::max(lineWidthRange[1], kDefaultLineWidth);
 }
 
@@ -639,13 +809,13 @@ GeometryRenderer::render(const core::MeridionalGeometry& geom,
   }
 
   const auto viewport = makeViewport(geom, viewportWidth, viewportHeight);
-  auto drawSession = DrawSession{shaderProgram_,
-                                 vao_,
-                                 vbo_,
-                                 viewportUniformLocation_,
-                                 colorUniformLocation_,
-                                 maxLineWidth_,
-                                 scratchVertices_};
+  const DrawUniforms uniforms{
+    .viewport = viewportUniformLocation_,
+    .color = colorUniformLocation_,
+    .useVertexColor = useVertexColorUniformLocation_,
+    .alpha = alphaUniformLocation_,
+  };
+  auto drawSession = DrawSession{shaderProgram_, vao_, vbo_, uniforms, maxLineWidth_, scratchVertices_};
   drawSession.setViewport(viewport);
 
   if (settings.showCoordGrid) {
@@ -657,7 +827,11 @@ GeometryRenderer::render(const core::MeridionalGeometry& geom,
   }
 
   if (flow != nullptr) {
-    drawStreamlines(*flow, settings, drawSession);
+    const double peakSpeed = maxStreamlineSpeed(*flow);
+    if (settings.showVelocityHeatmap) {
+      drawVelocityHeatmap(*flow, peakSpeed, drawSession);
+    }
+    drawStreamlines(*flow, settings, drawSession, peakSpeed);
     drawMeanLine(*flow, settings, drawSession);
   }
 
@@ -683,6 +857,8 @@ GeometryRenderer::destroy() noexcept
   }
   viewportUniformLocation_ = -1;
   colorUniformLocation_ = -1;
+  useVertexColorUniformLocation_ = -1;
+  alphaUniformLocation_ = -1;
   maxLineWidth_ = kDefaultLineWidth;
 }
 

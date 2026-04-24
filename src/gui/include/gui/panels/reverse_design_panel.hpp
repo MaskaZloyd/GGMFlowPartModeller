@@ -3,6 +3,7 @@
 #include "core/async_geometry_optimizer.hpp"
 #include "core/geometry_optimizer.hpp"
 #include "core/pump_params.hpp"
+#include "gui/panels/geometry_panel.hpp"
 #include "gui/renderer/fbo.hpp"
 #include "gui/renderer/geometry_renderer.hpp"
 #include "gui/renderer/render_settings.hpp"
@@ -43,6 +44,7 @@ struct ReverseDesignPanelState
 
   Fbo previewFbo;
   GeometryRenderer previewRenderer;
+  GeometryPanelState previewPanelState;
 };
 
 void
