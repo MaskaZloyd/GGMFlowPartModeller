@@ -86,8 +86,20 @@ struct GeometryOptimizationSettings
   double sigmaInitial{ 0.3 };
 
   double areaWeight{ 1.0 };
+  double residualSlopeWeight{ 0.05 };
+  double monotonicityWeight{ 20.0 };
   double smoothnessWeight{ 1e-3 };
   double constraintWeight{ 1e3 };
+
+  // Extra weight added at every user-defined target control point. This makes
+  // the optimizer hit the points the user actually placed, not only the
+  // nearest uniform samples.
+  double targetPointWeight{ 3.0 };
+
+  // Bounded least-squares polishing iterations after CMA-ES. 0 disables the
+  // local pass. The local pass still moves only enabled technological
+  // variables from GeometryVariableMask.
+  int localPolishIterations{ 6 };
 
   double maxInvalidChordFraction{ 0.20 };
 
@@ -108,6 +120,8 @@ struct GeometryObjectiveBreakdown
 {
   double total{0.0};
   double areaError{0.0};
+  double residualSlopePenalty{0.0};
+  double monotonicityPenalty{0.0};
   double smoothnessPenalty{0.0};
   double constraintPenalty{0.0};
   bool valid{false};

@@ -101,7 +101,27 @@ struct EvaluationArtifacts
 {
   MeridionalGeometry geometry;
   AreaProfile areaProfile;
-  std::vector<double> normalizedArea;
+};
+
+struct NormalizedAreaInterpolator
+{
+  std::vector<double> xiNodes;
+  std::vector<double> normalizedAreas;
+  double outletArea{ 0.0 };
+};
+
+struct ObjectiveSample
+{
+  double xi{ 0.0 };
+  double weight{ 1.0 };
+};
+
+struct AreaObjectiveComponents
+{
+  std::vector<double> weightedResiduals;
+  double areaError{ 0.0 };
+  double residualSlopePenalty{ 0.0 };
+  double monotonicityPenalty{ 0.0 };
 };
 
 } // namespace
@@ -189,8 +209,12 @@ isSettingsValid(const GeometryOptimizationSettings& settings) noexcept
          std::isfinite(settings.sigmaInitial) && settings.sigmaInitial > 0.0 &&
          settings.populationSize >= 0 && std::isfinite(settings.areaWeight) &&
          settings.areaWeight >= 0.0 &&
+         std::isfinite(settings.residualSlopeWeight) && settings.residualSlopeWeight >= 0.0 &&
+         std::isfinite(settings.monotonicityWeight) && settings.monotonicityWeight >= 0.0 &&
          std::isfinite(settings.smoothnessWeight) && settings.smoothnessWeight >= 0.0 &&
          std::isfinite(settings.constraintWeight) && settings.constraintWeight >= 0.0 &&
+         std::isfinite(settings.targetPointWeight) && settings.targetPointWeight >= 0.0 &&
+         settings.localPolishIterations >= 0 &&
          std::isfinite(settings.maxInvalidChordFraction) &&
          settings.maxInvalidChordFraction >= 0.0 && settings.maxInvalidChordFraction <= 1.0;
 }
@@ -264,7 +288,7 @@ decodeVectorToParams(const DesignVector& vector,
 }
 
 [[nodiscard]] Result<EvaluationArtifacts>
-buildEvaluationArtifacts(const PumpParams& params, const int sampleCount)
+buildEvaluationArtifacts(const PumpParams& params)
 {
   auto geometryResult = buildGeometry(params);
   if (!geometryResult) {
@@ -296,15 +320,9 @@ buildEvaluationArtifacts(const PumpParams& params, const int sampleCount)
     return std::unexpected(areaResult.error());
   }
 
-  auto normalizedResult = normalizedAreaSamples(*areaResult, sampleCount);
-  if (!normalizedResult) {
-    return std::unexpected(normalizedResult.error());
-  }
-
   return EvaluationArtifacts{
     .geometry = std::move(*geometryResult),
     .areaProfile = std::move(*areaResult),
-    .normalizedArea = std::move(*normalizedResult),
   };
 }
 
@@ -351,10 +369,10 @@ evaluateConstraintPenalty(const MeridionalGeometry& geometry,
   const double minGap = std::max(0.01 * radialSpan, 0.1);
   double penalty = 0.0;
 
-  const auto accumulateViolation = [&](double violation, double scale) {
+  const auto accumulateViolation = [](double& bucket, double violation, double scale) {
     if (violation > 0.0 && std::isfinite(violation) && std::isfinite(scale) && scale > 0.0) {
       const double normalized = violation / scale;
-      penalty += normalized * normalized;
+      bucket += normalized * normalized;
     }
   };
 
@@ -363,6 +381,7 @@ evaluateConstraintPenalty(const MeridionalGeometry& geometry,
     return kLargePenalty;
   }
 
+  double wallPenalty = 0.0;
   for (std::size_t i = 0; i < pairCount; ++i) {
     const auto& hub = geometry.hubCurve[i];
     const auto& shroud = geometry.shroudCurve[i];
@@ -372,10 +391,11 @@ evaluateConstraintPenalty(const MeridionalGeometry& geometry,
       return kLargePenalty;
     }
 
-    accumulateViolation((radiusMin - kConstraintTolerance) - hub.y(), radialSpan);
-    accumulateViolation(shroud.y() - (radiusMax + kConstraintTolerance), radialSpan);
-    accumulateViolation(minGap - (shroud.y() - hub.y()), radialSpan);
+    accumulateViolation(wallPenalty, (radiusMin - kConstraintTolerance) - hub.y(), radialSpan);
+    accumulateViolation(wallPenalty, shroud.y() - (radiusMax + kConstraintTolerance), radialSpan);
+    accumulateViolation(wallPenalty, minGap - (shroud.y() - hub.y()), radialSpan);
   }
+  penalty += wallPenalty / static_cast<double>(pairCount);
 
   if (areaProfile.flowAreas.size() != areaProfile.arcLengths.size() ||
       areaProfile.chordLengths.size() != areaProfile.flowAreas.size() ||
@@ -383,6 +403,7 @@ evaluateConstraintPenalty(const MeridionalGeometry& geometry,
     return kLargePenalty;
   }
 
+  double profilePenalty = 0.0;
   std::size_t invalidChordCount = 0U;
   for (std::size_t i = 0; i < areaProfile.flowAreas.size(); ++i) {
     const double area = areaProfile.flowAreas[i];
@@ -396,22 +417,26 @@ evaluateConstraintPenalty(const MeridionalGeometry& geometry,
     }
 
     if (area <= 0.0) {
-      penalty += 10.0;
+      profilePenalty += 10.0;
     }
 
     if (chord <= 0.0) {
       ++invalidChordCount;
-      penalty += 5.0;
+      profilePenalty += 5.0;
     }
 
     if (midPoint.y() < radiusMin - kConstraintTolerance ||
         midPoint.y() > radiusMax + kConstraintTolerance) {
-      penalty += 5.0;
+      profilePenalty += 5.0;
     }
 
     if (i > 0U && areaProfile.arcLengths[i] < areaProfile.arcLengths[i - 1U]) {
-      penalty += 20.0;
+      profilePenalty += 20.0;
     }
+  }
+
+  if (!areaProfile.flowAreas.empty()) {
+    penalty += profilePenalty / static_cast<double>(areaProfile.flowAreas.size());
   }
 
   if (!areaProfile.chordLengths.empty()) {
@@ -432,6 +457,8 @@ makeFailureObjective() noexcept
   return GeometryObjectiveBreakdown{
     .total = kLargePenalty,
     .areaError = 0.0,
+    .residualSlopePenalty = 0.0,
+    .monotonicityPenalty = 0.0,
     .smoothnessPenalty = 0.0,
     .constraintPenalty = kLargePenalty,
     .valid = false,
@@ -541,10 +568,12 @@ makeDefaultBounds(double d2, double dvt)
   return bounds;
 }
 
-Result<std::vector<double>>
-normalizedAreaSamples(const AreaProfile& profile, const int sampleCount)
+namespace {
+
+[[nodiscard]] Result<NormalizedAreaInterpolator>
+makeNormalizedAreaInterpolator(const AreaProfile& profile)
 {
-  if (sampleCount < 2 || profile.flowAreas.size() < 2U || profile.arcLengths.size() < 2U ||
+  if (profile.flowAreas.size() < 2U || profile.arcLengths.size() < 2U ||
       profile.flowAreas.size() != profile.arcLengths.size()) {
     return std::unexpected(CoreError::InvalidParameter);
   }
@@ -556,8 +585,10 @@ normalizedAreaSamples(const AreaProfile& profile, const int sampleCount)
     return std::unexpected(CoreError::InvalidParameter);
   }
 
-  std::vector<double> normalizedAreas(profile.flowAreas.size(), 0.0);
-  std::vector<double> xiNodes(profile.arcLengths.size(), 0.0);
+  NormalizedAreaInterpolator interpolator;
+  interpolator.outletArea = finalArea;
+  interpolator.normalizedAreas.resize(profile.flowAreas.size(), 0.0);
+  interpolator.xiNodes.resize(profile.arcLengths.size(), 0.0);
 
   for (std::size_t i = 0; i < profile.flowAreas.size(); ++i) {
     const double area = profile.flowAreas[i];
@@ -569,32 +600,263 @@ normalizedAreaSamples(const AreaProfile& profile, const int sampleCount)
       return std::unexpected(CoreError::InvalidParameter);
     }
 
-    normalizedAreas[i] = area / finalArea;
-    xiNodes[i] = arcLength / finalArcLength;
+    interpolator.normalizedAreas[i] = area / finalArea;
+    interpolator.xiNodes[i] = arcLength / finalArcLength;
   }
 
-  std::vector<double> samples(static_cast<std::size_t>(sampleCount), 0.0);
-  std::size_t segmentIndex = 0U;
-  for (int sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex) {
-    const double xi = static_cast<double>(sampleIndex) / static_cast<double>(sampleCount - 1);
+  return interpolator;
+}
 
-    while (segmentIndex + 1U < xiNodes.size() - 1U && xiNodes[segmentIndex + 1U] < xi) {
-      ++segmentIndex;
+[[nodiscard]] double
+evaluateNormalizedAreaAtXi(const NormalizedAreaInterpolator& interpolator, double xi) noexcept
+{
+  if (interpolator.xiNodes.size() < 2U ||
+      interpolator.xiNodes.size() != interpolator.normalizedAreas.size()) {
+    return 0.0;
+  }
+
+  const double clampedXi = std::clamp(std::isfinite(xi) ? xi : 0.0, 0.0, 1.0);
+  auto segmentIndex = std::size_t{ 0U };
+  while (segmentIndex + 1U < interpolator.xiNodes.size() - 1U &&
+         interpolator.xiNodes[segmentIndex + 1U] < clampedXi) {
+    ++segmentIndex;
+  }
+
+  const double leftXi = interpolator.xiNodes[segmentIndex];
+  const double rightXi = interpolator.xiNodes[segmentIndex + 1U];
+  const double leftArea = interpolator.normalizedAreas[segmentIndex];
+  const double rightArea = interpolator.normalizedAreas[segmentIndex + 1U];
+  const double dx = rightXi - leftXi;
+
+  if (std::abs(dx) <= kMinimumPositive) {
+    return rightArea;
+  }
+
+  const double t = std::clamp((clampedXi - leftXi) / dx, 0.0, 1.0);
+  return ((1.0 - t) * leftArea) + (t * rightArea);
+}
+
+[[nodiscard]] std::vector<ObjectiveSample>
+makeObjectiveSamples(const TargetAreaCurve& target, const GeometryOptimizationSettings& settings)
+{
+  std::vector<ObjectiveSample> samples;
+  samples.reserve(static_cast<std::size_t>(settings.sampleCount) + target.points().size());
+
+  for (int sampleIndex = 0; sampleIndex < settings.sampleCount; ++sampleIndex) {
+    const double xi =
+      static_cast<double>(sampleIndex) / static_cast<double>(settings.sampleCount - 1);
+    samples.push_back(ObjectiveSample{ .xi = xi, .weight = 1.0 });
+  }
+
+  if (settings.targetPointWeight > 0.0) {
+    for (const auto& point : target.points()) {
+      if (std::isfinite(point.xi)) {
+        samples.push_back(ObjectiveSample{
+          .xi = std::clamp(point.xi, 0.0, 1.0),
+          .weight = settings.targetPointWeight,
+        });
+      }
     }
+  }
 
-    const double leftXi = xiNodes[segmentIndex];
-    const double rightXi = xiNodes[segmentIndex + 1U];
-    const double leftArea = normalizedAreas[segmentIndex];
-    const double rightArea = normalizedAreas[segmentIndex + 1U];
-    const double dx = rightXi - leftXi;
+  std::sort(samples.begin(),
+            samples.end(),
+            [](const ObjectiveSample& lhs, const ObjectiveSample& rhs) {
+              return lhs.xi < rhs.xi;
+            });
 
-    if (std::abs(dx) <= kMinimumPositive) {
-      samples[static_cast<std::size_t>(sampleIndex)] = rightArea;
+  std::vector<ObjectiveSample> merged;
+  merged.reserve(samples.size());
+  for (const auto& sample : samples) {
+    if (!std::isfinite(sample.weight) || sample.weight <= 0.0) {
+      continue;
+    }
+    if (!merged.empty() && std::abs(merged.back().xi - sample.xi) <= kMinimumPositive) {
+      merged.back().weight += sample.weight;
+      continue;
+    }
+    merged.push_back(sample);
+  }
+
+  return merged;
+}
+
+[[nodiscard]] AreaObjectiveComponents
+evaluateAreaObjectiveComponents(const NormalizedAreaInterpolator& interpolator,
+                                const TargetAreaCurve& target,
+                                const GeometryOptimizationSettings& settings)
+{
+  AreaObjectiveComponents components;
+  const auto samples = makeObjectiveSamples(target, settings);
+  if (samples.empty()) {
+    return components;
+  }
+
+  const bool useAbsoluteAnchor =
+    settings.referenceOutletArea > 0.0 && std::isfinite(settings.referenceOutletArea);
+  const double currentScale =
+    useAbsoluteAnchor ? interpolator.outletArea / settings.referenceOutletArea : 1.0;
+
+  std::vector<double> currentValues(samples.size(), 0.0);
+  std::vector<double> targetValues(samples.size(), 0.0);
+
+  double totalWeight = 0.0;
+  double weightedAreaError = 0.0;
+  for (std::size_t i = 0; i < samples.size(); ++i) {
+    currentValues[i] = evaluateNormalizedAreaAtXi(interpolator, samples[i].xi) * currentScale;
+    targetValues[i] = target.evaluate(samples[i].xi);
+    const double diff = currentValues[i] - targetValues[i];
+
+    totalWeight += samples[i].weight;
+    weightedAreaError += samples[i].weight * diff * diff;
+  }
+
+  if (totalWeight > 0.0) {
+    components.areaError = weightedAreaError / totalWeight;
+    if (settings.areaWeight > 0.0) {
+      const double scale = std::sqrt(settings.areaWeight / totalWeight);
+      for (std::size_t i = 0; i < samples.size(); ++i) {
+        components.weightedResiduals.push_back(
+          std::sqrt(samples[i].weight) * scale * (currentValues[i] - targetValues[i]));
+      }
+    }
+  }
+
+  std::vector<double> slopeDiffs;
+  std::vector<double> slopeWeights;
+  std::vector<double> monotonicityViolations;
+  std::vector<double> monotonicityWeights;
+  slopeDiffs.reserve(samples.size());
+  slopeWeights.reserve(samples.size());
+  monotonicityViolations.reserve(samples.size());
+  monotonicityWeights.reserve(samples.size());
+
+  for (std::size_t i = 0; i + 1U < samples.size(); ++i) {
+    const double dx = samples[i + 1U].xi - samples[i].xi;
+    if (dx <= kMinimumPositive) {
       continue;
     }
 
-    const double t = std::clamp((xi - leftXi) / dx, 0.0, 1.0);
-    samples[static_cast<std::size_t>(sampleIndex)] = ((1.0 - t) * leftArea) + (t * rightArea);
+    const double currentDelta = currentValues[i + 1U] - currentValues[i];
+    const double targetDelta = targetValues[i + 1U] - targetValues[i];
+    const double segmentWeight = 0.5 * (samples[i].weight + samples[i + 1U].weight);
+
+    slopeDiffs.push_back(currentDelta - targetDelta);
+    slopeWeights.push_back(segmentWeight);
+
+    if (targetDelta >= -kMinimumPositive) {
+      const double drop = currentValues[i] - currentValues[i + 1U];
+      if (drop > 0.0) {
+        monotonicityViolations.push_back(drop);
+        monotonicityWeights.push_back(segmentWeight);
+      }
+    }
+  }
+
+  const auto appendWeightedResiduals = [&](std::span<const double> values,
+                                           std::span<const double> weights,
+                                           double objectiveWeight,
+                                           double& penalty) {
+    const double totalLocalWeight = std::accumulate(weights.begin(), weights.end(), 0.0);
+    if (values.empty() || totalLocalWeight <= 0.0) {
+      return;
+    }
+
+    double weightedPenalty = 0.0;
+    for (std::size_t i = 0; i < values.size(); ++i) {
+      weightedPenalty += weights[i] * values[i] * values[i];
+    }
+    penalty = weightedPenalty / totalLocalWeight;
+
+    if (objectiveWeight <= 0.0) {
+      return;
+    }
+    const double scale = std::sqrt(objectiveWeight / totalLocalWeight);
+    for (std::size_t i = 0; i < values.size(); ++i) {
+      components.weightedResiduals.push_back(std::sqrt(weights[i]) * scale * values[i]);
+    }
+  };
+
+  appendWeightedResiduals(slopeDiffs,
+                          slopeWeights,
+                          settings.residualSlopeWeight,
+                          components.residualSlopePenalty);
+  appendWeightedResiduals(monotonicityViolations,
+                          monotonicityWeights,
+                          settings.monotonicityWeight,
+                          components.monotonicityPenalty);
+
+  return components;
+}
+
+[[nodiscard]] GeometryObjectiveBreakdown
+evaluateObjectiveFromArtifacts(const EvaluationArtifacts& artifacts,
+                               const PumpParams& params,
+                               const TargetAreaCurve& target,
+                               const GeometryOptimizationSettings& settings,
+                               std::vector<double>* weightedResiduals)
+{
+  auto interpolatorResult = makeNormalizedAreaInterpolator(artifacts.areaProfile);
+  if (!interpolatorResult) {
+    return makeFailureObjective();
+  }
+
+  auto areaComponents = evaluateAreaObjectiveComponents(*interpolatorResult, target, settings);
+  const double smoothnessPenalty = evaluateSmoothnessPenalty(artifacts.geometry, params);
+  const double constraintPenalty =
+    evaluateConstraintPenalty(artifacts.geometry, artifacts.areaProfile, params, settings);
+
+  if (!std::isfinite(areaComponents.areaError) ||
+      !std::isfinite(areaComponents.residualSlopePenalty) ||
+      !std::isfinite(areaComponents.monotonicityPenalty) || !std::isfinite(smoothnessPenalty) ||
+      !std::isfinite(constraintPenalty)) {
+    return makeFailureObjective();
+  }
+
+  const double total = (settings.areaWeight * areaComponents.areaError) +
+                       (settings.residualSlopeWeight * areaComponents.residualSlopePenalty) +
+                       (settings.monotonicityWeight * areaComponents.monotonicityPenalty) +
+                       (settings.smoothnessWeight * smoothnessPenalty) +
+                       (settings.constraintWeight * constraintPenalty);
+
+  if (!std::isfinite(total)) {
+    return makeFailureObjective();
+  }
+
+  if (weightedResiduals != nullptr) {
+    *weightedResiduals = std::move(areaComponents.weightedResiduals);
+  }
+
+  return GeometryObjectiveBreakdown{
+    .total = total,
+    .areaError = areaComponents.areaError,
+    .residualSlopePenalty = areaComponents.residualSlopePenalty,
+    .monotonicityPenalty = areaComponents.monotonicityPenalty,
+    .smoothnessPenalty = smoothnessPenalty,
+    .constraintPenalty = constraintPenalty,
+    .valid = true,
+  };
+}
+
+} // namespace
+
+Result<std::vector<double>>
+normalizedAreaSamples(const AreaProfile& profile, const int sampleCount)
+{
+  if (sampleCount < 2) {
+    return std::unexpected(CoreError::InvalidParameter);
+  }
+
+  auto interpolatorResult = makeNormalizedAreaInterpolator(profile);
+  if (!interpolatorResult) {
+    return std::unexpected(interpolatorResult.error());
+  }
+
+  std::vector<double> samples(static_cast<std::size_t>(sampleCount), 0.0);
+  for (int sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex) {
+    const double xi = static_cast<double>(sampleIndex) / static_cast<double>(sampleCount - 1);
+    samples[static_cast<std::size_t>(sampleIndex)] =
+      evaluateNormalizedAreaAtXi(*interpolatorResult, xi);
   }
 
   return samples;
@@ -610,61 +872,12 @@ evaluateGeometryObjective(const PumpParams& params,
     return makeFailureObjective();
   }
 
-  auto artifactsResult = buildEvaluationArtifacts(params, settings.sampleCount);
+  auto artifactsResult = buildEvaluationArtifacts(params);
   if (!artifactsResult) {
     return makeFailureObjective();
   }
 
-  const auto& artifacts = *artifactsResult;
-
-  double areaError = 0.0;
-  const bool useAbsoluteAnchor =
-    settings.referenceOutletArea > 0.0 && std::isfinite(settings.referenceOutletArea);
-  const double outletArea = artifacts.areaProfile.flowAreas.back();
-  for (int i = 0; i < settings.sampleCount; ++i) {
-    const double xi = static_cast<double>(i) / static_cast<double>(settings.sampleCount - 1);
-    const double targetValue = target.evaluate(xi);
-    const double currentValue = artifacts.normalizedArea[static_cast<std::size_t>(i)];
-    double diff = 0.0;
-    if (useAbsoluteAnchor) {
-      // Compare absolute flow areas. currentValue is F_cur(ξ)/F_cur(outlet);
-      // multiplying by outletArea recovers the absolute area at ξ. Target
-      // is scaled by the physical reference (π·D₂·b₂ from initial params),
-      // so DE is pinned to a real-world outlet size rather than a free scale.
-      const double currentAbs = currentValue * outletArea;
-      const double targetAbs = targetValue * settings.referenceOutletArea;
-      diff = (currentAbs - targetAbs) / settings.referenceOutletArea;
-    } else {
-      diff = currentValue - targetValue;
-    }
-    areaError += diff * diff;
-  }
-  areaError /= static_cast<double>(settings.sampleCount);
-
-  const double smoothnessPenalty = evaluateSmoothnessPenalty(artifacts.geometry, params);
-  const double constraintPenalty =
-    evaluateConstraintPenalty(artifacts.geometry, artifacts.areaProfile, params, settings);
-
-  if (!std::isfinite(areaError) || !std::isfinite(smoothnessPenalty) ||
-      !std::isfinite(constraintPenalty)) {
-    return makeFailureObjective();
-  }
-
-  const double total = (settings.areaWeight * areaError) +
-                       (settings.smoothnessWeight * smoothnessPenalty) +
-                       (settings.constraintWeight * constraintPenalty);
-
-  if (!std::isfinite(total)) {
-    return makeFailureObjective();
-  }
-
-  return GeometryObjectiveBreakdown{
-    .total = total,
-    .areaError = areaError,
-    .smoothnessPenalty = smoothnessPenalty,
-    .constraintPenalty = constraintPenalty,
-    .valid = true,
-  };
+  return evaluateObjectiveFromArtifacts(*artifactsResult, params, target, settings, nullptr);
 }
 
 Result<GeometryOptimizationResult>
@@ -677,7 +890,7 @@ evaluateGeometryCandidate(const PumpParams& params,
     return std::unexpected(CoreError::GeometryBuildFailed);
   }
 
-  auto artifactsResult = buildEvaluationArtifacts(params, settings.sampleCount);
+  auto artifactsResult = buildEvaluationArtifacts(params);
   if (!artifactsResult) {
     return std::unexpected(artifactsResult.error());
   }
@@ -903,6 +1116,9 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
       for (int i = 0; i < dim; ++i) {
         sample.x(i) = std::clamp(sample.x(i), -1.0, 1.0);
       }
+      // The actual candidate may be clipped by the box. Keep the CMA paths and
+      // covariance update consistent with the step that was really evaluated.
+      sample.y = (sample.x - cma.mean) / cma.sigma;
     }
 
     // --- Evaluate ---------------------------------------------------------
@@ -974,6 +1190,169 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
 
     if ((generation + 1) % eigenRefreshInterval == 0) {
       refreshEigenDecomposition(cma);
+    }
+  }
+
+  struct PolishEvaluation
+  {
+    Eigen::VectorXd xNorm;
+    DesignVector design;
+    std::vector<double> residuals;
+    GeometryObjectiveBreakdown objective;
+  };
+
+  auto normalizeDesign = [&](const DesignVector& design) {
+    Eigen::VectorXd xNorm(dim);
+    for (int i = 0; i < dim; ++i) {
+      const auto idx = static_cast<std::size_t>(i);
+      xNorm(i) = (design.x[idx] - midpoint(i)) / halfRange(i);
+      xNorm(i) = std::clamp(xNorm(i), -1.0, 1.0);
+    }
+    return xNorm;
+  };
+
+  auto evaluatePolishPoint = [&](const Eigen::VectorXd& xNorm) -> Result<PolishEvaluation> {
+    const DesignVector decodedVec = denormalize(xNorm);
+    const PumpParams params = decodeVectorToParams(decodedVec, initialParams, bounds, members);
+
+    auto artifactsResult = buildEvaluationArtifacts(params);
+    if (!artifactsResult) {
+      return std::unexpected(artifactsResult.error());
+    }
+
+    std::vector<double> residuals;
+    const auto objective =
+      evaluateObjectiveFromArtifacts(*artifactsResult, params, target, settings, &residuals);
+    if (!objective.valid || residuals.empty()) {
+      return std::unexpected(CoreError::GeometryBuildFailed);
+    }
+
+    return PolishEvaluation{
+      .xNorm = xNorm,
+      .design = decodedVec,
+      .residuals = std::move(residuals),
+      .objective = objective,
+    };
+  };
+
+  if (settings.localPolishIterations > 0) {
+    constexpr double kPolishFiniteDiffStep = 1e-3;
+    constexpr double kPolishMinLambda = 1e-9;
+    constexpr double kPolishMaxLambda = 1e12;
+    double damping = 1e-3;
+
+    auto currentResult = evaluatePolishPoint(normalizeDesign(bestDesign));
+    if (currentResult) {
+      auto current = std::move(*currentResult);
+      if (current.objective.total < bestObjective.total) {
+        bestObjective = current.objective;
+        bestDesign = current.design;
+      }
+
+      for (int polishIteration = 0; polishIteration < settings.localPolishIterations;
+           ++polishIteration) {
+        if (cancelled()) {
+          return std::unexpected(CoreError::Cancelled);
+        }
+
+        const auto residualCount = static_cast<int>(current.residuals.size());
+        if (residualCount == 0) {
+          break;
+        }
+
+        Eigen::VectorXd residual(residualCount);
+        for (int row = 0; row < residualCount; ++row) {
+          residual(row) = current.residuals[static_cast<std::size_t>(row)];
+        }
+
+        Eigen::MatrixXd jacobian = Eigen::MatrixXd::Zero(residualCount, dim);
+        for (int col = 0; col < dim; ++col) {
+          if (cancelled()) {
+            return std::unexpected(CoreError::Cancelled);
+          }
+
+          Eigen::VectorXd plus = current.xNorm;
+          Eigen::VectorXd minus = current.xNorm;
+          plus(col) = std::clamp(plus(col) + kPolishFiniteDiffStep, -1.0, 1.0);
+          minus(col) = std::clamp(minus(col) - kPolishFiniteDiffStep, -1.0, 1.0);
+
+          const double centralDenom = plus(col) - minus(col);
+          if (std::abs(centralDenom) <= kMinimumPositive) {
+            continue;
+          }
+
+          auto plusResult = evaluatePolishPoint(plus);
+          auto minusResult = evaluatePolishPoint(minus);
+
+          if (plusResult && minusResult &&
+              plusResult->residuals.size() == current.residuals.size() &&
+              minusResult->residuals.size() == current.residuals.size()) {
+            for (int row = 0; row < residualCount; ++row) {
+              const auto idx = static_cast<std::size_t>(row);
+              jacobian(row, col) = (plusResult->residuals[idx] - minusResult->residuals[idx]) /
+                                   centralDenom;
+            }
+            continue;
+          }
+
+          if (plusResult && plusResult->residuals.size() == current.residuals.size() &&
+              std::abs(plus(col) - current.xNorm(col)) > kMinimumPositive) {
+            const double denom = plus(col) - current.xNorm(col);
+            for (int row = 0; row < residualCount; ++row) {
+              const auto idx = static_cast<std::size_t>(row);
+              jacobian(row, col) = (plusResult->residuals[idx] - current.residuals[idx]) / denom;
+            }
+            continue;
+          }
+
+          if (minusResult && minusResult->residuals.size() == current.residuals.size() &&
+              std::abs(current.xNorm(col) - minus(col)) > kMinimumPositive) {
+            const double denom = current.xNorm(col) - minus(col);
+            for (int row = 0; row < residualCount; ++row) {
+              const auto idx = static_cast<std::size_t>(row);
+              jacobian(row, col) = (current.residuals[idx] - minusResult->residuals[idx]) / denom;
+            }
+          }
+        }
+
+        Eigen::MatrixXd normal = jacobian.transpose() * jacobian;
+        normal += damping * Eigen::MatrixXd::Identity(dim, dim);
+        const Eigen::VectorXd rhs = -(jacobian.transpose() * residual);
+        const Eigen::VectorXd step = normal.ldlt().solve(rhs);
+        if (!step.allFinite() || step.norm() < 1e-7) {
+          break;
+        }
+
+        bool accepted = false;
+        double stepScale = 1.0;
+        for (int attempt = 0; attempt < 6; ++attempt) {
+          Eigen::VectorXd candidateX = current.xNorm + stepScale * step;
+          for (int i = 0; i < dim; ++i) {
+            candidateX(i) = std::clamp(candidateX(i), -1.0, 1.0);
+          }
+          if ((candidateX - current.xNorm).norm() < 1e-8) {
+            break;
+          }
+
+          auto candidateResult = evaluatePolishPoint(candidateX);
+          if (candidateResult && candidateResult->objective.total < current.objective.total) {
+            current = std::move(*candidateResult);
+            bestObjective = current.objective;
+            bestDesign = current.design;
+            damping = std::max(kPolishMinLambda, damping * 0.3);
+            accepted = true;
+            break;
+          }
+          stepScale *= 0.5;
+        }
+
+        if (!accepted) {
+          damping *= 10.0;
+          if (damping > kPolishMaxLambda) {
+            break;
+          }
+        }
+      }
     }
   }
 

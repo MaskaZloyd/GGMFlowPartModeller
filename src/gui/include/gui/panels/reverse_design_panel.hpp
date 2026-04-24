@@ -25,6 +25,7 @@ struct ReverseDesignPanelState
   core::MeridionalGeometry previewGeometry;
   core::AreaProfile previewAreaProfile;
   RenderSettings previewRenderSettings;
+  double comparisonReferenceOutletArea = 0.0;
 
   std::vector<double> xiSamples;
   std::vector<double> targetSamples;

@@ -127,6 +127,7 @@ clearPreview(ReverseDesignPanelState& state)
   state.currentObjective = {};
   state.previewGeometry = {};
   state.previewAreaProfile = {};
+  state.comparisonReferenceOutletArea = 0.0;
   state.xiSamples.clear();
   state.targetSamples.clear();
   state.currentSamples.clear();
@@ -155,11 +156,20 @@ updateComparisonSamples(ReverseDesignPanelState& state)
   state.currentSamples = std::move(*currentSamples);
   state.residualSamples.resize(sampleCount, 0.0);
 
+  const double currentOutletArea =
+    state.previewAreaProfile.flowAreas.empty() ? 0.0 : state.previewAreaProfile.flowAreas.back();
+  const bool useReference = state.comparisonReferenceOutletArea > 0.0 &&
+                            std::isfinite(state.comparisonReferenceOutletArea) &&
+                            std::isfinite(currentOutletArea) && currentOutletArea > 0.0;
+  const double currentScale =
+    useReference ? currentOutletArea / state.comparisonReferenceOutletArea : 1.0;
+
   for (std::size_t i = 0; i < sampleCount; ++i) {
     const double xi = static_cast<double>(i) / static_cast<double>(sampleCount - 1U);
     const double targetValue = state.editorState.targetCurve.evaluate(xi);
     state.xiSamples[i] = xi;
     state.targetSamples[i] = targetValue;
+    state.currentSamples[i] *= currentScale;
     state.residualSamples[i] = state.currentSamples[i] - targetValue;
   }
 }
@@ -202,6 +212,7 @@ previewCurrentGeometry(ReverseDesignPanelState& state)
   auto previewSettings = state.optimizationSettings;
   previewSettings.referenceOutletArea =
     std::numbers::pi * state.currentParams.d2 * state.currentParams.b2;
+  state.comparisonReferenceOutletArea = previewSettings.referenceOutletArea;
 
   auto previewResult = core::evaluateGeometryCandidate(
     state.currentParams, state.editorState.targetCurve, previewSettings);
@@ -228,6 +239,7 @@ submitOptimization(ReverseDesignPanelState& state)
   auto optimizationSettings = state.optimizationSettings;
   optimizationSettings.referenceOutletArea =
     std::numbers::pi * state.currentParams.d2 * state.currentParams.b2;
+  state.comparisonReferenceOutletArea = optimizationSettings.referenceOutletArea;
 
   state.asyncOptimizer->submit(
     state.currentParams, state.editorState.targetCurve, state.bounds, optimizationSettings);
@@ -405,12 +417,20 @@ drawOptimizationSettings(ReverseDesignPanelState& state)
                "0 = авто: 4 + ⌊3·ln N⌋, где N — число активных переменных");
   fixedDragInt(
     "gen", "generations", &opt.maxGenerations, 1, 500, "Число поколений CMA-ES");
+  fixedDragInt("polish",
+               "LM polish",
+               &opt.localPolishIterations,
+               0,
+               20,
+               "Локальные итерации bounded least-squares после CMA-ES");
 
   constexpr double SIGMA_MIN = 0.01;
   constexpr double SIGMA_MAX = 1.0;
   constexpr double ZERO = 0.0;
   constexpr double ONE = 1.0;
   constexpr double AREA_MAX = 10.0;
+  constexpr double SHAPE_MAX = 100.0;
+  constexpr double POINT_MAX = 20.0;
   constexpr double SMOOTH_MAX = 0.05;
   constexpr double CONS_MAX = 10000.0;
 
@@ -427,6 +447,27 @@ drawOptimizationSettings(ReverseDesignPanelState& state)
   ImGui::TextDisabled("Веса в целевой функции");
   fixedDrag(
     "aw", "area weight", &opt.areaWeight, &ZERO, &AREA_MAX, "%.3f", 0.01F);
+  fixedDrag("tpw",
+            "target point weight",
+            &opt.targetPointWeight,
+            &ZERO,
+            &POINT_MAX,
+            "%.2f",
+            0.05F);
+  fixedDrag("slope",
+            "slope weight",
+            &opt.residualSlopeWeight,
+            &ZERO,
+            &SHAPE_MAX,
+            "%.3f",
+            0.01F);
+  fixedDrag("mono",
+            "monotonicity weight",
+            &opt.monotonicityWeight,
+            &ZERO,
+            &SHAPE_MAX,
+            "%.3f",
+            0.05F);
   fixedDrag(
     "sw", "smoothness weight", &opt.smoothnessWeight, &ZERO, &SMOOTH_MAX, "%.5f", 0.0005F);
   fixedDrag(
@@ -492,6 +533,8 @@ drawDiagnostics(const ReverseDesignPanelState& state)
   if (ImGui::BeginTable("##objective", 2, tableFlags)) {
     labelValueRow("Objective total", "%.6f", state.currentObjective.total);
     labelValueRow("Area error", "%.6f", state.currentObjective.areaError);
+    labelValueRow("Slope", "%.6f", state.currentObjective.residualSlopePenalty);
+    labelValueRow("Monotonicity", "%.6f", state.currentObjective.monotonicityPenalty);
     labelValueRow("Smoothness", "%.6f", state.currentObjective.smoothnessPenalty);
     labelValueRow("Constraints", "%.6f", state.currentObjective.constraintPenalty);
     if (state.hasOptimizationResult) {
@@ -626,13 +669,18 @@ drawComparisonWindow(ReverseDesignPanelState& state, const unsigned int dockspac
 
   const float availableHeight = ImGui::GetContentRegionAvail().y;
   const float compareHeight = std::max(180.0F, availableHeight * 0.55F);
+  const bool useReference =
+    state.comparisonReferenceOutletArea > 0.0 && std::isfinite(state.comparisonReferenceOutletArea);
+  const char* yAxisLabel = useReference ? "F / F_ref" : "F_norm";
+  const char* targetLabel = useReference ? "F_target_ref" : "F_target_norm";
+  const char* currentLabel = useReference ? "F_current_ref" : "F_current_norm";
 
   if (ImPlot::BeginPlot(
         "##TargetVsCurrentArea", ImVec2(-1, compareHeight), ImPlotFlags_Crosshairs)) {
     const double yMax =
       std::max(findSeriesMax(state.targetSamples), findSeriesMax(state.currentSamples)) * 1.1;
 
-    ImPlot::SetupAxes("xi", "F_norm", ImPlotAxisFlags_None, ImPlotAxisFlags_AutoFit);
+    ImPlot::SetupAxes("xi", yAxisLabel, ImPlotAxisFlags_None, ImPlotAxisFlags_AutoFit);
     ImPlot::SetupAxisLimits(ImAxis_X1, 0.0, 1.0, ImPlotCond_Always);
     ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, std::max(yMax, 1.1), ImPlotCond_Always);
     ImPlot::SetupLegend(ImPlotLocation_NorthWest);
@@ -640,7 +688,7 @@ drawComparisonWindow(ReverseDesignPanelState& state, const unsigned int dockspac
 
     ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.85F, 0.30F, 0.18F, 1.0F));
     ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2.4F);
-    ImPlot::PlotLine("F_target_norm",
+    ImPlot::PlotLine(targetLabel,
                      state.xiSamples.data(),
                      state.targetSamples.data(),
                      static_cast<int>(state.xiSamples.size()));
@@ -649,7 +697,7 @@ drawComparisonWindow(ReverseDesignPanelState& state, const unsigned int dockspac
 
     ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.18F, 0.45F, 0.84F, 1.0F));
     ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2.4F);
-    ImPlot::PlotLine("F_current_norm",
+    ImPlot::PlotLine(currentLabel,
                      state.xiSamples.data(),
                      state.currentSamples.data(),
                      static_cast<int>(state.xiSamples.size()));
