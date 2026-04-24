@@ -16,6 +16,7 @@ namespace {
 
 constexpr double kMinAreaValue = 1e-6;
 constexpr float kPlotHeight = 320.0F;
+constexpr int kCurvePlotSamples = 160;
 
 [[nodiscard]] std::vector<ggm::core::TargetAreaPoint>
 makeDefaultCurvePoints()
@@ -166,6 +167,13 @@ drawAreaCurveEditor(AreaCurveEditorState& state)
     xs[i] = points[i].xi;
     ys[i] = points[i].value;
   }
+  std::vector<double> curveXs(static_cast<std::size_t>(kCurvePlotSamples), 0.0);
+  std::vector<double> curveYs(static_cast<std::size_t>(kCurvePlotSamples), 0.0);
+  for (int i = 0; i < kCurvePlotSamples; ++i) {
+    const double xi = static_cast<double>(i) / static_cast<double>(kCurvePlotSamples - 1);
+    curveXs[static_cast<std::size_t>(i)] = xi;
+    curveYs[static_cast<std::size_t>(i)] = state.targetCurve.evaluate(xi);
+  }
 
   bool anyPointHeld = false;
   bool immediatePreview = false;
@@ -181,7 +189,8 @@ drawAreaCurveEditor(AreaCurveEditorState& state)
     ImPlot::SetupMouseText(ImPlotLocation_SouthEast);
 
     ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2.5F);
-    ImPlot::PlotLine("Целевая кривая", xs.data(), ys.data(), static_cast<int>(xs.size()));
+    ImPlot::PlotLine(
+      "Целевая кривая", curveXs.data(), curveYs.data(), static_cast<int>(curveXs.size()));
     ImPlot::PopStyleVar();
 
     ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 5.5F, ImVec4(0.18F, 0.42F, 0.80F, 1.0F));

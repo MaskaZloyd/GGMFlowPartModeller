@@ -11,6 +11,18 @@ constexpr double kMinAreaValue = 1e-6;
 constexpr double kDuplicateXiTolerance = 1e-6;
 
 [[nodiscard]] double
+sign(double value) noexcept
+{
+  if (value > 0.0) {
+    return 1.0;
+  }
+  if (value < 0.0) {
+    return -1.0;
+  }
+  return 0.0;
+}
+
+[[nodiscard]] double
 sanitizeXi(double xi) noexcept
 {
   if (!std::isfinite(xi)) {
@@ -26,6 +38,111 @@ sanitizeAreaValue(double value) noexcept
     return kMinAreaValue;
   }
   return std::max(value, kMinAreaValue);
+}
+
+[[nodiscard]] double
+filteredEndpointDerivative(double derivative,
+                           double adjacentSlope,
+                           double nextSlope) noexcept
+{
+  if (sign(derivative) != sign(adjacentSlope)) {
+    return 0.0;
+  }
+  if (sign(adjacentSlope) != sign(nextSlope) &&
+      std::abs(derivative) > 3.0 * std::abs(adjacentSlope)) {
+    return 3.0 * adjacentSlope;
+  }
+  return derivative;
+}
+
+[[nodiscard]] double
+pchipDerivativeAt(std::span<const TargetAreaPoint> points, std::size_t pointIndex)
+{
+  if (points.size() < 2U || pointIndex >= points.size()) {
+    return 0.0;
+  }
+
+  const auto segmentLength = [points](std::size_t segmentIndex) noexcept {
+    return points[segmentIndex + 1U].xi - points[segmentIndex].xi;
+  };
+  const auto segmentSlope = [points, segmentLength](std::size_t segmentIndex) noexcept {
+    const double dx = segmentLength(segmentIndex);
+    if (dx <= kDuplicateXiTolerance) {
+      return 0.0;
+    }
+    return (points[segmentIndex + 1U].value - points[segmentIndex].value) / dx;
+  };
+
+  if (points.size() == 2U) {
+    return segmentSlope(0U);
+  }
+
+  if (pointIndex == 0U) {
+    const double firstH = segmentLength(0U);
+    const double secondH = segmentLength(1U);
+    if (firstH <= kDuplicateXiTolerance || secondH <= kDuplicateXiTolerance) {
+      return 0.0;
+    }
+    const double firstSlope = segmentSlope(0U);
+    const double secondSlope = segmentSlope(1U);
+    const double derivative =
+      (((2.0 * firstH) + secondH) * firstSlope - firstH * secondSlope) / (firstH + secondH);
+    return filteredEndpointDerivative(derivative, firstSlope, secondSlope);
+  }
+
+  const auto lastIndex = points.size() - 1U;
+  if (pointIndex == lastIndex) {
+    const auto lastSegment = lastIndex - 1U;
+    const auto previousSegment = lastIndex - 2U;
+    const double lastH = segmentLength(lastSegment);
+    const double previousH = segmentLength(previousSegment);
+    if (lastH <= kDuplicateXiTolerance || previousH <= kDuplicateXiTolerance) {
+      return 0.0;
+    }
+    const double lastSlope = segmentSlope(lastSegment);
+    const double previousSlope = segmentSlope(previousSegment);
+    const double derivative =
+      (((2.0 * lastH) + previousH) * lastSlope - lastH * previousSlope) / (lastH + previousH);
+    return filteredEndpointDerivative(derivative, lastSlope, previousSlope);
+  }
+
+  const double leftSlope = segmentSlope(pointIndex - 1U);
+  const double rightSlope = segmentSlope(pointIndex);
+  if (leftSlope == 0.0 || rightSlope == 0.0 || sign(leftSlope) != sign(rightSlope)) {
+    return 0.0;
+  }
+
+  const double leftH = segmentLength(pointIndex - 1U);
+  const double rightH = segmentLength(pointIndex);
+  if (leftH <= kDuplicateXiTolerance || rightH <= kDuplicateXiTolerance) {
+    return 0.0;
+  }
+
+  const double w1 = (2.0 * rightH) + leftH;
+  const double w2 = rightH + (2.0 * leftH);
+  return (w1 + w2) / ((w1 / leftSlope) + (w2 / rightSlope));
+}
+
+[[nodiscard]] double
+pchipEvaluate(std::span<const TargetAreaPoint> points,
+              std::size_t leftIndex,
+              std::size_t rightIndex,
+              double t,
+              double dx)
+{
+  const auto& left = points[leftIndex];
+  const auto& right = points[rightIndex];
+  const double leftDerivative = pchipDerivativeAt(points, leftIndex);
+  const double rightDerivative = pchipDerivativeAt(points, rightIndex);
+  const double t2 = t * t;
+  const double t3 = t2 * t;
+  const double h00 = (2.0 * t3) - (3.0 * t2) + 1.0;
+  const double h10 = t3 - (2.0 * t2) + t;
+  const double h01 = (-2.0 * t3) + (3.0 * t2);
+  const double h11 = t3 - t2;
+  const double value = (h00 * left.value) + (h10 * dx * leftDerivative) +
+                       (h01 * right.value) + (h11 * dx * rightDerivative);
+  return sanitizeAreaValue(value);
 }
 
 } // namespace
@@ -94,7 +211,7 @@ TargetAreaCurve::evaluate(double xi) const noexcept
   }
 
   const double t = std::clamp((clampedXi - left.xi) / dx, 0.0, 1.0);
-  return ((1.0 - t) * left.value) + (t * right.value);
+  return pchipEvaluate(points_, leftIndex, rightIndex, t, dx);
 }
 
 void
