@@ -8,7 +8,6 @@ coverage-report/
 .claude/
 .vscode/
 ggm.log
-imgui.ini
 perf.data*
 perf_*.data
 perf_*.txt
