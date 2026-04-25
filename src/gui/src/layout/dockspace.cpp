@@ -18,6 +18,7 @@ constexpr const char* MERIDIONAL_MODULE_WINDOW_TITLE = "Меридианное �
 constexpr const char* MERIDIONAL_MODULE_DOCKSPACE_NAME = "MeridionalSectionDockSpace";
 constexpr const char* REVERSE_MODULE_WINDOW_TITLE = "Обратное проектирование";
 constexpr const char* REVERSE_MODULE_DOCKSPACE_NAME = "ReverseDesignDockSpace";
+constexpr bool REVERSE_DESIGN_ENABLED = false;
 
 void
 buildRootModulesLayout(ImGuiID dockspaceId) noexcept
@@ -45,7 +46,9 @@ buildRootModulesLayout(ImGuiID dockspaceId) noexcept
     ImGui::DockBuilderSplitNode(modulesNode, ImGuiDir_Down, 0.20F, nullptr, &modulesNode);
 
   ImGui::DockBuilderDockWindow(MERIDIONAL_MODULE_WINDOW_TITLE, modulesNode);
-  ImGui::DockBuilderDockWindow(REVERSE_MODULE_WINDOW_TITLE, modulesNode);
+  if constexpr (REVERSE_DESIGN_ENABLED) {
+    ImGui::DockBuilderDockWindow(REVERSE_MODULE_WINDOW_TITLE, modulesNode);
+  }
   ImGui::DockBuilderDockWindow("Log", logNode);
   ImGui::DockBuilderFinish(dockspaceId);
 }
@@ -192,6 +195,11 @@ buildDockspace(bool canUndo, bool canRedo) noexcept
       ImGui::EndMenu();
     }
 
+    if (ImGui::BeginMenu("View")) {
+      ImGui::MenuItem("Обратное проектирование временно отключено", nullptr, false, false);
+      ImGui::EndMenu();
+    }
+
     ImGui::EndMenuBar();
   }
 
@@ -227,10 +235,12 @@ buildDockspace(bool canUndo, bool canRedo) noexcept
                                                   MERIDIONAL_MODULE_DOCKSPACE_NAME,
                                                   dockspaceId,
                                                   buildMeridionalSectionLayout);
-  layout.reverseDesignDockspaceId = drawModuleWindow(REVERSE_MODULE_WINDOW_TITLE,
-                                                     REVERSE_MODULE_DOCKSPACE_NAME,
-                                                     dockspaceId,
-                                                     buildReverseDesignLayout);
+  if constexpr (REVERSE_DESIGN_ENABLED) {
+    layout.reverseDesignDockspaceId = drawModuleWindow(REVERSE_MODULE_WINDOW_TITLE,
+                                                       REVERSE_MODULE_DOCKSPACE_NAME,
+                                                       dockspaceId,
+                                                       buildReverseDesignLayout);
+  }
 
   return layout;
 }
