@@ -447,7 +447,11 @@ makeExportPath()
   using Clock = std::chrono::system_clock;
   const auto now = Clock::to_time_t(Clock::now());
   std::tm tm{};
+#ifdef _WIN32
+  localtime_s(&tm, &now);
+#else
   localtime_r(&now, &tm);
+#endif
   char buf[64];
   std::strftime(buf, sizeof(buf), "ggm_geometry_%Y%m%d_%H%M%S.ppm", &tm);
   return (std::filesystem::current_path() / buf).string();

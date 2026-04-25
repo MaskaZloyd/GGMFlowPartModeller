@@ -14,7 +14,7 @@ using Catch::Matchers::WithinRel;
 
 // Build a quarter-circle NURBS from a single arc segment and verify that all
 // evaluated points lie on the unit circle (exact rational conic property).
-TEST_CASE("evaluate: single arc segment — all points on circle", "[nurbs]")
+TEST_CASE("evaluate: single arc segment - all points on circle", "[nurbs]")
 {
   const Vec2 center{0.0, 0.0};
   constexpr double radius = 1.0;
@@ -30,7 +30,7 @@ TEST_CASE("evaluate: single arc segment — all points on circle", "[nurbs]")
 }
 
 // A NURBS built from a single straight segment must evaluate to a straight line.
-TEST_CASE("evaluate: straight segment — collinear points", "[nurbs]")
+TEST_CASE("evaluate: straight segment - collinear points", "[nurbs]")
 {
   const Vec2 p0{0.0, 0.0};
   const Vec2 p1{3.0, 4.0};

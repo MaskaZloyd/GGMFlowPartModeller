@@ -58,11 +58,14 @@ AppWindow::create(WindowConfig cfg) noexcept
   // Load a font with Cyrillic glyphs. Try common system paths.
   constexpr const char* FONT_CANDIDATES[] = {
     // NOLINT
+    "C:/Windows/Fonts/segoeui.ttf",
+    "C:/Windows/Fonts/arial.ttf",
+    "C:/Windows/Fonts/tahoma.ttf",
+    "C:/Windows/Fonts/verdana.ttf",
     "/usr/share/fonts/TTF/DejaVuSans.ttf",
     "/usr/share/fonts/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/Library/Fonts/DejaVuSans.ttf",
-    "C:/Windows/Fonts/DejaVuSans.ttf",
   };
   const ImWchar* cyrillicRanges = imguiIo.Fonts->GetGlyphRangesCyrillic();
   bool fontLoaded = false;

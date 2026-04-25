@@ -63,7 +63,7 @@ TEST_CASE_METHOD(FemFixture, "solveFem: psi solution size equals node count", "[
   REQUIRE(static_cast<int>(result->psi.size()) == nh * m);
 }
 
-TEST_CASE_METHOD(FemFixture, "solveFem: Dirichlet BCs satisfied — hub psi=0, shroud psi=1", "[fem]")
+TEST_CASE_METHOD(FemFixture, "solveFem: Dirichlet BCs satisfied - hub psi=0, shroud psi=1", "[fem]")
 {
   auto grid = makeRectGrid(10, 6);
   const auto hubNodes = grid.hubNodes;

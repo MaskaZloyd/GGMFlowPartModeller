@@ -20,6 +20,6 @@ target_include_directories(core PUBLIC
 )
 
 target_link_libraries(core
-    PUBLIC math spdlog::spdlog
-    PRIVATE nlohmann_json::nlohmann_json TBB::tbb
+    PUBLIC math spdlog::spdlog TBB::tbb
+    PRIVATE nlohmann_json::nlohmann_json
 )

@@ -22,8 +22,7 @@ class GGMFlowPartModellerConan(ConanFile):
     def configure(self):
         self.options["glew"].shared = False
         self.options["onetbb"].shared = False
-        if str(self.settings.os) != "Windows":
-            self.options["hwloc"].shared = True
+        self.options["hwloc"].shared = True
         # Use std::format instead of fmt — sidesteps a clang/C++23/fmt 10
         # consteval-checking incompatibility that rejects some of spdlog's
         # internal format strings.

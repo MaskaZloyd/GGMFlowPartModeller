@@ -4,6 +4,7 @@ add_subdirectory(gui)
 
 add_executable(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE gui)
+ggm_copy_runtime_dlls(${PROJECT_NAME})
 
 if(WIN32)
     install(TARGETS ${PROJECT_NAME}

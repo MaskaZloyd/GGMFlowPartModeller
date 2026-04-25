@@ -21,6 +21,17 @@ if(WIN32)
     add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
 endif()
 
+function(ggm_copy_runtime_dlls target)
+    if(WIN32)
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND}
+                "-Ddlls=$<JOIN:$<TARGET_RUNTIME_DLLS:${target}>,;>"
+                "-Ddst=$<TARGET_FILE_DIR:${target}>"
+                -P "${CMAKE_SOURCE_DIR}/cmake/CopyRuntimeDlls.cmake"
+        )
+    endif()
+endfunction()
+
 if(MSVC)
     add_compile_options(/W4 /permissive- /Zc:__cplusplus /utf-8)
 else()

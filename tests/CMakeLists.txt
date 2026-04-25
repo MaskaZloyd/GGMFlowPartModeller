@@ -18,6 +18,7 @@ add_executable(test_math
     test_math_arc_length.cpp
 )
 target_link_libraries(test_math PRIVATE Catch2::Catch2WithMain math)
+ggm_copy_runtime_dlls(test_math)
 catch_discover_tests(test_math)
 
 # ---------------------------------------------------------------------------
@@ -34,6 +35,7 @@ add_executable(test_core
     test_core_velocity_field.cpp
 )
 target_link_libraries(test_core PRIVATE Catch2::Catch2WithMain core)
+ggm_copy_runtime_dlls(test_core)
 catch_discover_tests(test_core)
 
 # ---------------------------------------------------------------------------
@@ -43,6 +45,7 @@ add_executable(test_gui_commands
     test_gui_undo_stack.cpp
 )
 target_link_libraries(test_gui_commands PRIVATE Catch2::Catch2WithMain gui)
+ggm_copy_runtime_dlls(test_gui_commands)
 catch_discover_tests(test_gui_commands)
 
 # ---------------------------------------------------------------------------
@@ -51,3 +54,4 @@ catch_discover_tests(test_gui_commands)
 # ---------------------------------------------------------------------------
 add_executable(bench_hotpaths bench_hotpaths.cpp)
 target_link_libraries(bench_hotpaths PRIVATE core math)
+ggm_copy_runtime_dlls(bench_hotpaths)

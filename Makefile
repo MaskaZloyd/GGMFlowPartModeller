@@ -59,6 +59,7 @@ conan-install:
 		-s build_type=$(CONAN_BUILD_TYPE) \
 		-s compiler.cppstd=23 \
 		-c tools.cmake.cmaketoolchain:user_presets="" \
+		-c tools.cmake.cmaketoolchain:generator=Ninja \
 		--build=missing
 	@rm -f CMakeUserPresets.json
 
