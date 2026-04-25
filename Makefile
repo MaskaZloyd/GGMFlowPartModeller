@@ -19,6 +19,7 @@ CLANG_TIDY     ?= clang-tidy
 CLANG_FORMAT   ?= clang-format
 LLVM_PROFDATA  ?= llvm-profdata
 LLVM_COV       ?= llvm-cov
+POWERSHELL     ?= powershell
 
 PRESET                ?= debug
 COVERAGE_PRESET       ?= coverage
@@ -28,6 +29,12 @@ COVERAGE_BUILD_DIR    ?= build/$(COVERAGE_PRESET)
 COMPILE_COMMANDS_LINK ?= compile_commands.json
 LLVM_PROFILE_FILE     ?= $(COVERAGE_BUILD_DIR)/default.profraw
 COVERAGE_OUTPUT_DIR   ?= build/coverage-report
+
+ifeq ($(OS),Windows_NT)
+  SHELL := cmd.exe
+  .SHELLFLAGS := /C
+  WIN_VS_RUN = $(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File cmake/Run-VsDevCmd.ps1 -CommandLine
+endif
 
 # Map preset to Conan build_type
 ifeq ($(filter $(PRESET),release),$(PRESET))
@@ -39,20 +46,77 @@ endif
 FORMAT_DIRS := src tests
 LINT_DIRS   := src tests
 
-FORMAT_FILES := $(shell find $(FORMAT_DIRS) -type f \( \
-	-name '*.c' -o -name '*.cc' -o -name '*.cpp' -o \
-	-name '*.h' -o -name '*.hh' -o -name '*.hpp' \
-\) 2>/dev/null)
+ifeq ($(OS),Windows_NT)
+  FORMAT_FILES := $(shell git ls-files -- "*.c" "*.cc" "*.cpp" "*.h" "*.hh" "*.hpp" 2>NUL)
+  LINT_FILES   := $(shell git ls-files -- "*.cc" "*.cpp" 2>NUL)
+else
+  FORMAT_FILES := $(shell find $(FORMAT_DIRS) -type f \( \
+    -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o \
+    -name '*.h' -o -name '*.hh' -o -name '*.hpp' \
+  \) 2>/dev/null)
 
-LINT_FILES := $(shell find $(LINT_DIRS) -type f \( \
-	-name '*.cc' -o -name '*.cpp' \
-\) 2>/dev/null)
+  LINT_FILES := $(shell find $(LINT_DIRS) -type f \( \
+    -name '*.cc' -o -name '*.cpp' \
+  \) 2>/dev/null)
+endif
 
 .PHONY: all build configure conan-install rebuild compile-commands install package \
         debug release asan tsan ubsan coverage \
         test lint format format-check clean coverage-report help
 
 all: build
+
+ifeq ($(OS),Windows_NT)
+
+conan-install:
+	@where $(CONAN) >NUL 2>NUL && ($(WIN_VS_RUN) "$(CONAN) install . --output-folder=$(BUILD_DIR) -s build_type=$(CONAN_BUILD_TYPE) -s compiler.cppstd=23 -c tools.cmake.cmaketoolchain:user_presets= -c tools.cmake.cmaketoolchain:generator=Ninja --build=missing") || (if exist "$(BUILD_DIR)\conan_toolchain.cmake" (echo Conan was not found; reusing existing $(BUILD_DIR)\conan_toolchain.cmake.) else (echo Conan was not found and $(BUILD_DIR)\conan_toolchain.cmake does not exist. Install Conan or run with CONAN=path\to\conan.exe. && exit /b 1))
+	@if exist CMakeUserPresets.json del /f /q CMakeUserPresets.json
+
+configure: conan-install
+	$(WIN_VS_RUN) "$(CMAKE) --preset $(PRESET)"
+
+build: configure
+	$(WIN_VS_RUN) "$(CMAKE) --build --preset $(PRESET)"
+	@if exist "$(BUILD_DIR)\compile_commands.json" copy /Y "$(BUILD_DIR)\compile_commands.json" "$(COMPILE_COMMANDS_LINK)" >NUL
+
+rebuild: clean build
+
+compile-commands: configure
+	@if exist "$(BUILD_DIR)\compile_commands.json" (copy /Y "$(BUILD_DIR)\compile_commands.json" "$(COMPILE_COMMANDS_LINK)" >NUL) else (echo compile_commands.json was not generated for preset '$(PRESET)'. && exit /b 1)
+
+install: build
+	$(WIN_VS_RUN) "$(CMAKE) --install $(BUILD_DIR) --prefix $(INSTALL_DIR)"
+
+package: build
+	$(WIN_VS_RUN) "$(CMAKE) --build --preset $(PRESET) --target package"
+
+debug release asan tsan ubsan coverage:
+	$(MAKE) build PRESET=$@
+
+test: configure
+	@if not exist "$(BUILD_DIR)" mkdir "$(BUILD_DIR)"
+	@if "$(PRESET)"=="$(COVERAGE_PRESET)" ($(WIN_VS_RUN) "set LLVM_PROFILE_FILE=$(abspath $(LLVM_PROFILE_FILE))&& $(CTEST) --preset $(PRESET) --output-on-failure") else ($(WIN_VS_RUN) "$(CTEST) --preset $(PRESET) --output-on-failure")
+
+lint: $(BUILD_DIR)/compile_commands.json
+	@if "$(strip $(LINT_FILES))"=="" (echo No C++ source files found to lint.) else ($(WIN_VS_RUN) "$(CLANG_TIDY) -p $(BUILD_DIR) $(LINT_FILES)")
+
+$(BUILD_DIR)/compile_commands.json: conan-install
+	$(WIN_VS_RUN) "$(CMAKE) --preset $(PRESET)"
+
+format:
+	@if "$(strip $(FORMAT_FILES))"=="" (echo No source files found to format.) else ($(WIN_VS_RUN) "$(CLANG_FORMAT) -i $(FORMAT_FILES)")
+
+format-check:
+	@if "$(strip $(FORMAT_FILES))"=="" (echo No source files found to check.) else ($(WIN_VS_RUN) "$(CLANG_FORMAT) --dry-run --Werror $(FORMAT_FILES)")
+
+coverage-report:
+	@echo coverage-report is POSIX-only in this Makefile. Use WSL/Git Bash or pass llvm commands manually for build\coverage.
+	@exit /b 1
+
+clean:
+	$(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -Command "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'build','$(COMPILE_COMMANDS_LINK)'"
+
+else
 
 conan-install:
 	$(CONAN) install . --output-folder=$(BUILD_DIR) \
@@ -168,6 +232,8 @@ coverage-report:
 
 clean:
 	rm -rf build "$(COMPILE_COMMANDS_LINK)"
+
+endif
 
 help:
 	@echo "Targets:"
