@@ -14,6 +14,7 @@ struct RenderSettings
 
   /// Diagnostic overlays.
   bool showCriticalMarkers = true; ///< inlet / outlet circles
+  bool showSegmentJoints = true;   ///< geometry segment joints on hub and shroud
   bool showInvalidChords = true;   ///< red highlight for degenerate chords
   bool showAngleTangents = false;  ///< short arrows at al1, al2, al02 positions
 

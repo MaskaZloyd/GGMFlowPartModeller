@@ -132,6 +132,7 @@ drawSettingsPanel(const core::ComputationSettings& compSettings,
     ImGui::Checkbox("Тепловая карта |V|", &rend.showVelocityHeatmap);
     ImGui::Checkbox("Цвет л.тока по |V|", &rend.colorStreamlinesBySpeed);
     ImGui::Checkbox("Критические точки (вход/выход)", &rend.showCriticalMarkers);
+    ImGui::Checkbox("Стыки сегментов hub/shroud", &rend.showSegmentJoints);
     ImGui::Checkbox("Hover-инспектор", &rend.showHoverInspector);
     ImGui::Checkbox("Наложить снимок", &rend.showSnapshotOverlay);
     ImGui::Separator();
@@ -153,6 +154,7 @@ drawSettingsPanel(const core::ComputationSettings& compSettings,
     (rend.showVelocityHeatmap != renderSettings.showVelocityHeatmap) ||
     (rend.colorStreamlinesBySpeed != renderSettings.colorStreamlinesBySpeed) ||
     (rend.showCriticalMarkers != renderSettings.showCriticalMarkers) ||
+    (rend.showSegmentJoints != renderSettings.showSegmentJoints) ||
     (rend.showHoverInspector != renderSettings.showHoverInspector) ||
     (rend.showSnapshotOverlay != renderSettings.showSnapshotOverlay) ||
     (rend.hubLineWidth != renderSettings.hubLineWidth) ||

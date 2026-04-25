@@ -237,6 +237,43 @@ drawCriticalMarkers(ImDrawList* dl,
 }
 
 void
+drawSegmentJointMarkers(ImDrawList* dl,
+                        ImVec2 imgMin,
+                        ImVec2 imgMax,
+                        const core::MeridionalGeometry& geom,
+                        const ViewportMap& vp)
+{
+  constexpr ImU32 HUB_FILL = IM_COL32(255, 238, 82, 235);
+  constexpr ImU32 SHROUD_FILL = IM_COL32(57, 221, 214, 235);
+  constexpr ImU32 STROKE = IM_COL32(20, 24, 34, 230);
+  constexpr float RADIUS = 4.5F;
+
+  const auto drawJointSet = [&](const math::NurbsCurve& curve, ImU32 fill) {
+    if (curve.controlPoints.size() < 5U) {
+      return;
+    }
+
+    for (std::size_t index = 2U; index + 1U < curve.controlPoints.size(); index += 2U) {
+      const auto& point = curve.controlPoints[index];
+      const ImVec2 px = worldToPixel(point.x(), point.y(), imgMin, imgMax, vp);
+      dl->AddRectFilled(ImVec2(px.x - RADIUS, px.y - RADIUS),
+                        ImVec2(px.x + RADIUS, px.y + RADIUS),
+                        fill,
+                        1.5F);
+      dl->AddRect(ImVec2(px.x - RADIUS, px.y - RADIUS),
+                  ImVec2(px.x + RADIUS, px.y + RADIUS),
+                  STROKE,
+                  1.5F,
+                  ImDrawFlags_None,
+                  1.0F);
+    }
+  };
+
+  drawJointSet(geom.hubNurbs, HUB_FILL);
+  drawJointSet(geom.shroudNurbs, SHROUD_FILL);
+}
+
+void
 drawHoverInspector(ImVec2 imgMin,
                    ImVec2 imgMax,
                    const core::FlowResults* flow,
@@ -357,6 +394,8 @@ drawLegend(ImDrawList* dl, ImVec2 topLeft)
   const Entry entries[] = {
     {IM_COL32(199, 51, 46, 255), "Втулка (hub)"},
     {IM_COL32(46, 92, 199, 255), "Покрывной диск (shroud)"},
+    {IM_COL32(255, 238, 82, 255), "Стыки hub"},
+    {IM_COL32(57, 221, 214, 255), "Стыки shroud"},
     {IM_COL32(77, 158, 77, 255), "Средняя линия"},
     {IM_COL32(68, 1, 84, 255), "Линия тока ψ = 0"},
     {IM_COL32(253, 231, 37, 255), "Линия тока ψ = 1"},
@@ -522,6 +561,9 @@ drawGeometryPanelWithTitle(const char* windowTitle,
     drawStatsOverlay(dl, ImVec2(legendPos.x, legendPos.y + legendH + 8.0F), flow);
 
     drawPortLines(dl, imgMin, imgMax, geom, vp);
+    if (renderSettings.showSegmentJoints) {
+      drawSegmentJointMarkers(dl, imgMin, imgMax, geom, vp);
+    }
     if (renderSettings.showCriticalMarkers) {
       drawCriticalMarkers(dl, imgMin, imgMax, geom, flow, vp);
     }
