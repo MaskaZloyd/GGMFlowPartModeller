@@ -15,8 +15,8 @@ struct WindowConfig
   const char* title = "GGM Flow Part Modeller";
 };
 
-// RAII wrapper for GLFW window + OpenGL context + ImGui initialization.
-// Destruction reverses init order: ImGui → GL context → GLFW.
+/// RAII wrapper for GLFW window + OpenGL context + ImGui initialization.
+/// Destruction reverses init order: ImGui → GL context → GLFW.
 class AppWindow
 {
 public:
@@ -42,4 +42,4 @@ private:
   bool imguiInitialized_ = false;
 };
 
-} // namespace ggm::gui
+}

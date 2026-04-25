@@ -41,7 +41,6 @@ resampleArcLength(std::span<const Vec2> polyline, int n) noexcept
   for (int k = 0; k < n; ++k) {
     double u = static_cast<double>(k) / static_cast<double>(n - 1);
 
-    // Advance idx to find segment containing u
     while (idx + 1 < polyline.size() - 1 && s[idx + 1] < u) {
       ++idx;
     }
@@ -59,4 +58,4 @@ resampleArcLength(std::span<const Vec2> polyline, int n) noexcept
   return result;
 }
 
-} // namespace ggm::math
+}

@@ -18,12 +18,12 @@ public:
 
   [[nodiscard]] const ComputationSettings& compSettings() const noexcept { return compSettings_; }
 
-  // Set new parameters. Returns the old params (for undo).
+  /// Set new parameters. Returns the old params (for undo).
   PumpParams setParams(PumpParams newParams) noexcept;
 
   void setCompSettings(ComputationSettings settings) noexcept { compSettings_ = settings; }
 
-  // Rebuild geometry (fast — NURBS eval only). Safe to call on UI thread.
+  /// Rebuild geometry (fast — NURBS eval only). Safe to call on UI thread.
   [[nodiscard]] Result<void> rebuildGeometry() noexcept;
 
 private:
@@ -33,4 +33,4 @@ private:
   bool geometryValid_ = false;
 };
 
-} // namespace ggm::core
+}

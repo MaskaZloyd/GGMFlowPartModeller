@@ -13,4 +13,4 @@ saveParams(const PumpParams& params, const std::filesystem::path& path) noexcept
 [[nodiscard]] Result<PumpParams>
 loadParams(const std::filesystem::path& path) noexcept;
 
-} // namespace ggm::core
+}

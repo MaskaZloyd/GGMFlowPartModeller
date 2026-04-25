@@ -19,7 +19,7 @@ enum class CoreError
   RenderFailed,
 };
 
-// Human-readable error description.
+/// Human-readable error description.
 [[nodiscard]] constexpr const char*
 toString(CoreError err) noexcept
 {
@@ -51,4 +51,4 @@ toString(CoreError err) noexcept
 template <typename T>
 using Result = std::expected<T, CoreError>;
 
-} // namespace ggm::core
+}

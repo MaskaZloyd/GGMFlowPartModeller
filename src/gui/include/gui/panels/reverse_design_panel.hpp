@@ -59,4 +59,4 @@ drawReverseDesignPanel(ReverseDesignPanelState& state,
                        const core::PumpParams& meridionalParams,
                        unsigned int dockspaceId);
 
-} // namespace ggm::gui
+}

@@ -18,9 +18,9 @@
 
 namespace ggm::core {
 
-// Asynchronous wrapper around optimizeGeometryForTargetArea using TBB
-// task_arena + task_group. Mirrors AsyncFlowSolver: UI submits, polls once
-// per frame, cancels cooperatively via a generation counter.
+/// Asynchronous wrapper around optimizeGeometryForTargetArea using TBB
+/// task_arena + task_group. Mirrors AsyncFlowSolver: UI submits, polls once
+/// per frame, cancels cooperatively via a generation counter.
 class AsyncGeometryOptimizer
 {
 public:
@@ -36,8 +36,8 @@ public:
               GeometryDesignBounds bounds,
               GeometryOptimizationSettings settings) noexcept;
 
-  // Consumes the pending result (if any). Returns true once per successful
-  // run; caller takes ownership of the result via `out`.
+  /// Consumes the pending result (if any). Returns true once per successful
+  /// run; caller takes ownership of the result via `out`.
   bool poll(GeometryOptimizationResult& out) noexcept;
 
   void cancelAndWait() noexcept;
@@ -67,4 +67,4 @@ private:
   std::optional<CoreError> lastError_;
 };
 
-} // namespace ggm::core
+}

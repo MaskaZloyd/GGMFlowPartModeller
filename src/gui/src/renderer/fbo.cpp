@@ -53,7 +53,6 @@ Fbo::resize(int width, int height) noexcept
   width_ = width;
   height_ = height;
 
-  // Clamp sample count to the driver's limit.
   GLint maxSamples = 1;
   glGetIntegerv(GL_MAX_SAMPLES, &maxSamples);
   int samples = samples_;
@@ -64,7 +63,6 @@ Fbo::resize(int width, int height) noexcept
     samples = 1;
   }
 
-  // --- Multisampled FBO (render target) ---
   glGenFramebuffers(1, &msFbo_);
   glBindFramebuffer(GL_FRAMEBUFFER, msFbo_);
 
@@ -86,7 +84,6 @@ Fbo::resize(int width, int height) noexcept
     return std::unexpected(core::CoreError::RenderFailed);
   }
 
-  // --- Resolve FBO (single-sample, texture-backed, for ImGui::Image) ---
   glGenFramebuffers(1, &fbo_);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
 
@@ -118,7 +115,7 @@ Fbo::bind() noexcept
 void
 Fbo::unbind() noexcept
 {
-  // Resolve: blit from multisampled -> single-sample texture.
+
   glBindFramebuffer(GL_READ_FRAMEBUFFER, msFbo_);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_);
   glBlitFramebuffer(0, 0, width_, height_, 0, 0, width_, height_, GL_COLOR_BUFFER_BIT, GL_LINEAR);
@@ -152,4 +149,4 @@ Fbo::destroy() noexcept
   height_ = 0;
 }
 
-} // namespace ggm::gui
+}

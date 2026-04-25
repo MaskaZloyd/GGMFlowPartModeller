@@ -27,4 +27,4 @@ PumpModel::rebuildGeometry() noexcept
   return {};
 }
 
-} // namespace ggm::core
+}

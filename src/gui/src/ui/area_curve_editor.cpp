@@ -137,7 +137,7 @@ drawPointsTable(AreaCurveEditorState& state)
   ImGui::EndTable();
 }
 
-} // namespace
+}
 
 void
 drawAreaCurveEditor(AreaCurveEditorState& state)
@@ -335,4 +335,4 @@ drawAreaCurveEditor(AreaCurveEditorState& state)
   drawPointsTable(state);
 }
 
-} // namespace ggm::ui
+}

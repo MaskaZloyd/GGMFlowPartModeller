@@ -12,8 +12,6 @@ namespace ggm::gui {
 
 namespace {
 
-// Thin wrapper around style::fixedDragDouble that pipes widget activation into
-// ParamsPanelState so we can batch the edit into a single undoable command.
 bool
 paramDrag(const char* id,
           const char* labelText,
@@ -23,17 +21,21 @@ paramDrag(const char* id,
           ParamsPanelState& state,
           const char* tooltip = nullptr)
 {
-  const auto result = style::fixedDragDouble(id, labelText, value, minVal, maxVal,
-                                          style::PANEL_DRAG_FORMAT_DOUBLE,
-                                          style::PANEL_DRAG_SPEED_DEFAULT,
-                                          tooltip);
+  const auto result = style::fixedDragDouble(id,
+                                             labelText,
+                                             value,
+                                             minVal,
+                                             maxVal,
+                                             style::PANEL_DRAG_FORMAT_DOUBLE,
+                                             style::PANEL_DRAG_SPEED_DEFAULT,
+                                             tooltip);
   if (result.activated && !state.active) {
     state.active = true;
   }
   return result.changed;
 }
 
-} // namespace
+}
 
 ParamsPanelResult
 drawParamsPanel(const core::PumpParams& current,
@@ -207,4 +209,4 @@ drawParamsPanel(const core::PumpParams& current,
   return result;
 }
 
-} // namespace ggm::gui
+}

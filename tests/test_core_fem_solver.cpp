@@ -34,7 +34,7 @@ makeRectGrid(int nh, int m)
   return *buildStripGrid(hub, shroud, m);
 }
 
-} // namespace
+}
 
 TEST_CASE_METHOD(FemFixture, "solveFem: returns error on degenerate grid", "[fem]")
 {

@@ -18,7 +18,7 @@ makeCmd(double before, double after)
   return gui::EditCommand{.before = p0, .after = p1, .label = "test"};
 }
 
-} // namespace
+}
 
 TEST_CASE("UndoStack: initially cannot undo or redo", "[undo_stack]")
 {

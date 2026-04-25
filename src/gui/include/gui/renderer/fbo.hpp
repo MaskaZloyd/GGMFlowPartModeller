@@ -6,7 +6,7 @@
 
 namespace ggm::gui {
 
-// RAII wrapper for an OpenGL framebuffer object with color texture + depth renderbuffer.
+/// RAII wrapper for an OpenGL framebuffer object with color texture + depth renderbuffer.
 class Fbo
 {
 public:
@@ -17,12 +17,12 @@ public:
   Fbo(Fbo&& other) noexcept;
   Fbo& operator=(Fbo&& other) noexcept;
 
-  // (Re)allocate if size changed. No-op if size matches.
+  /// (Re)allocate if size changed. No-op if size matches.
   [[nodiscard]] core::Result<void> resize(int width, int height) noexcept;
 
-  // Bind the multisampled FBO for rendering.
+  /// Bind the multisampled FBO for rendering.
   void bind() noexcept;
-  // Resolve MSAA -> colorTex_ and unbind.
+  /// Resolve MSAA -> colorTex_ and unbind.
   void unbind() noexcept;
 
   [[nodiscard]] unsigned int textureId() const noexcept { return colorTex_; }
@@ -31,12 +31,12 @@ public:
 private:
   void destroy() noexcept;
 
-  // Multisampled target (render here):
+  /// Multisampled target (render here):
   unsigned int msFbo_ = 0;
   unsigned int msColorRbo_ = 0;
   unsigned int msDepthRbo_ = 0;
 
-  // Resolve target (blitted into and displayed by ImGui):
+  /// Resolve target (blitted into and displayed by ImGui):
   unsigned int fbo_ = 0;
   unsigned int colorTex_ = 0;
 
@@ -45,4 +45,4 @@ private:
   int samples_ = 4;
 };
 
-} // namespace ggm::gui
+}

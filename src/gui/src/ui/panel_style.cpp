@@ -6,12 +6,12 @@ namespace ggm::gui::style {
 
 namespace {
 
-// Shared body for double / float / int drag widgets. Returns DragResult.
-// `drawWidget` is a callable that issues ImGui::DragScalar (or DragInt) and
-// returns whether the value changed this frame.
-template<typename DrawFn>
+template <typename DrawFn>
 DragResult
-fixedDragCommon(const char* id, const char* label, const char* tooltip, DrawFn&& drawWidget) noexcept
+fixedDragCommon(const char* id,
+                const char* label,
+                const char* tooltip,
+                DrawFn&& drawWidget) noexcept
 {
   ImGui::PushID(id);
   ImGui::SetNextItemWidth(PANEL_INPUT_WIDTH);
@@ -26,10 +26,10 @@ fixedDragCommon(const char* id, const char* label, const char* tooltip, DrawFn&&
   tooltipIfHovered(tooltip);
 
   ImGui::PopID();
-  return { changed, activated };
+  return {changed, activated};
 }
 
-} // namespace
+}
 
 DragResult
 fixedDragDouble(const char* id,
@@ -63,8 +63,8 @@ fixedDragInt(const char* id,
              const char* tooltip) noexcept
 {
   return fixedDragCommon(id, label, tooltip, [&]() {
-    const bool changed =
-      ImGui::DragInt("##v", value, 1.0F, minVal, maxVal, PANEL_DRAG_FORMAT_INT, ImGuiSliderFlags_AlwaysClamp);
+    const bool changed = ImGui::DragInt(
+      "##v", value, 1.0F, minVal, maxVal, PANEL_DRAG_FORMAT_INT, ImGuiSliderFlags_AlwaysClamp);
     *value = std::clamp(*value, minVal, maxVal);
     return changed;
   });
@@ -151,4 +151,4 @@ tooltipIfHovered(const char* text) noexcept
   }
 }
 
-} // namespace ggm::gui::ui
+}

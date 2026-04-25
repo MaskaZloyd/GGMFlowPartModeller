@@ -51,69 +51,69 @@ struct GeometryDesignBounds
   double be3RawDegMax{85.0};
 };
 
-// Per-variable opt-in mask. Each flag selects whether the corresponding
-// PumpParams field is moved by the optimizer or kept at its imported
-// value. D₂ and Dvt are NEVER optimized (treated as fixed inputs from the
-// meridional module) so they have no flag here.
+/// Per-variable opt-in mask. Each flag selects whether the corresponding
+/// PumpParams field is moved by the optimizer or kept at its imported
+/// value. D₂ and Dvt are NEVER optimized (treated as fixed inputs from the
+/// meridional module) so they have no flag here.
 struct GeometryVariableMask
 {
-  bool din{ false };
-  bool b2{ true };
-  bool r1{ true };
-  bool r2{ true };
-  bool r3{ true };
-  bool r4{ true };
-  bool al1{ false };
-  bool al2{ false };
-  bool al02{ false };
-  bool be1{ false };
-  bool be3{ false };
+  bool din{false};
+  bool b2{true};
+  bool r1{true};
+  bool r2{true};
+  bool r3{true};
+  bool r4{true};
+  bool al1{false};
+  bool al2{false};
+  bool al02{false};
+  bool be1{false};
+  bool be3{false};
 };
 
 struct GeometryOptimizationSettings
 {
-  int sampleCount{ 80 };
+  int sampleCount{80};
 
-  // Max CMA-ES generations. Each generation samples λ candidates.
-  int maxGenerations{ 100 };
+  /// Max CMA-ES generations. Each generation samples λ candidates.
+  int maxGenerations{100};
 
-  // Override for the CMA-ES population size (λ). 0 means "auto" → the
-  // classical default `4 + ⌊3·ln N⌋`.
-  int populationSize{ 0 };
+  /// Override for the CMA-ES population size (λ). 0 means "auto" → the
+  /// classical default `4 + ⌊3·ln N⌋`.
+  int populationSize{0};
 
-  // Initial step-size σ, measured as a fraction of each coordinate's
-  // `[min, max]` range (0.3 ≈ 30 % of the box per dimension).
-  double sigmaInitial{ 0.3 };
+  /// Initial step-size σ, measured as a fraction of each coordinate's
+  /// `[min, max]` range (0.3 ≈ 30 % of the box per dimension).
+  double sigmaInitial{0.3};
 
-  double areaWeight{ 1.0 };
-  double residualSlopeWeight{ 0.05 };
-  double monotonicityWeight{ 20.0 };
-  double smoothnessWeight{ 1e-3 };
-  double constraintWeight{ 1e3 };
+  double areaWeight{1.0};
+  double residualSlopeWeight{0.05};
+  double monotonicityWeight{20.0};
+  double smoothnessWeight{1e-3};
+  double constraintWeight{1e3};
 
-  // Extra weight added at every user-defined target control point. This makes
-  // the optimizer hit the points the user actually placed, not only the
-  // nearest uniform samples.
-  double targetPointWeight{ 3.0 };
+  /// Extra weight added at every user-defined target control point. This makes
+  /// the optimizer hit the points the user actually placed, not only the
+  /// nearest uniform samples.
+  double targetPointWeight{3.0};
 
-  // Bounded least-squares polishing iterations after CMA-ES. 0 disables the
-  // local pass. The local pass still moves only enabled technological
-  // variables from GeometryVariableMask.
-  int localPolishIterations{ 6 };
+  /// Bounded least-squares polishing iterations after CMA-ES. 0 disables the
+  /// local pass. The local pass still moves only enabled technological
+  /// variables from GeometryVariableMask.
+  int localPolishIterations{6};
 
-  double maxInvalidChordFraction{ 0.20 };
+  double maxInvalidChordFraction{0.20};
 
-  // Absolute-area anchor. When > 0, areaError is computed against target
-  // values scaled by this reference (typically π·D₂·b₂ from the initial
-  // params), so the optimizer cannot cheat by producing a geometrically-
-  // similar but mis-sized candidate. When 0 (default), areaError is shape-only.
-  double referenceOutletArea{ 0.0 };
+  /// Absolute-area anchor. When > 0, areaError is computed against target
+  /// values scaled by this reference (typically π·D₂·b₂ from the initial
+  /// params), so the optimizer cannot cheat by producing a geometrically-
+  /// similar but mis-sized candidate. When 0 (default), areaError is shape-only.
+  double referenceOutletArea{0.0};
 
   GeometryVariableMask mask{};
 
-  unsigned int seed{ 42 };
+  unsigned int seed{42};
 
-  bool useFemValidation{ true };
+  bool useFemValidation{true};
 };
 
 struct GeometryObjectiveBreakdown
@@ -139,9 +139,9 @@ struct GeometryOptimizationResult
   int generations{0};
 };
 
-// Optimizable design variable: points into PumpParams for the value,
-// GeometryDesignBounds for the lower/upper limits, GeometryVariableMask for
-// the enable flag, plus a display label for UI.
+/// Optimizable design variable: points into PumpParams for the value,
+/// GeometryDesignBounds for the lower/upper limits, GeometryVariableMask for
+/// the enable flag, plus a display label for UI.
 struct DesignVariable
 {
   const char* label;
@@ -151,21 +151,21 @@ struct DesignVariable
   bool GeometryVariableMask::* enabled;
 };
 
-// Canonical list of all variables the optimizer can potentially move.
-// Each variable carries its own mask flag — the optimizer only moves those
-// whose flag is true. D₂, Dvt, din, xa are never optimized.
+/// Canonical list of all variables the optimizer can potentially move.
+/// Each variable carries its own mask flag — the optimizer only moves those
+/// whose flag is true. D₂, Dvt, din, xa are never optimized.
 [[nodiscard]] std::span<const DesignVariable>
 allDesignVariables() noexcept;
 
-// Legacy helper: generic wide bounds. Prefer makeBoundsFromValues(params)
-// which anchors each bound to ±50 % of the imported value.
+/// Legacy helper: generic wide bounds. Prefer makeBoundsFromValues(params)
+/// which anchors each bound to ±50 % of the imported value.
 [[nodiscard]] GeometryDesignBounds
 makeDefaultBounds(double d2, double dvt);
 
-// Default bounds as ±50 % of each current parameter value. Signed params
-// (angles) use the symmetric interval [v − 0.5·|v|, v + 0.5·|v|] so the
-// sign is preserved. D₂/Dvt bounds are set to ±50 % too for completeness,
-// but they are not optimized in practice.
+/// Default bounds as ±50 % of each current parameter value. Signed params
+/// (angles) use the symmetric interval [v − 0.5·|v|, v + 0.5·|v|] so the
+/// sign is preserved. D₂/Dvt bounds are set to ±50 % too for completeness,
+/// but they are not optimized in practice.
 [[nodiscard]] GeometryDesignBounds
 makeBoundsFromValues(const PumpParams& params) noexcept;
 
@@ -189,4 +189,4 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
                               const GeometryOptimizationSettings& settings,
                               const CancelPredicate& isCancelled = {});
 
-} // namespace ggm::core
+}

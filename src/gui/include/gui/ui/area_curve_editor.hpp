@@ -20,4 +20,4 @@ struct AreaCurveEditorState
 void
 drawAreaCurveEditor(AreaCurveEditorState& state);
 
-} // namespace ggm::ui
+}

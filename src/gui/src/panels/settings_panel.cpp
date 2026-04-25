@@ -49,14 +49,12 @@ drawStatusIndicator(core::SolverStatus status, std::chrono::milliseconds lastDur
 {
   const auto display = solverStatusPanel(status);
 
-  // Colored dot + text
   ImDrawList* drawList = ImGui::GetWindowDrawList();
   ImVec2 cursor = ImGui::GetCursorScreenPos();
   float dotRadius = 6.0F;
   float lineHeight = ImGui::GetTextLineHeight();
   ImVec2 dotCenter(cursor.x + dotRadius, cursor.y + (lineHeight * 0.5F));
 
-  // Pulsating animation for Running state
   ImU32 dotColor = ImGui::ColorConvertFloat4ToU32(display.color);
   if (status == core::SolverStatus::Running) {
     float pulse = 0.5F + 0.5F * std::sin(static_cast<float>(ImGui::GetTime()) * 4.0F);
@@ -76,7 +74,7 @@ drawStatusIndicator(core::SolverStatus status, std::chrono::milliseconds lastDur
   }
 }
 
-} // namespace
+}
 
 SettingsPanelResult
 drawSettingsPanel(const core::ComputationSettings& compSettings,
@@ -96,7 +94,6 @@ drawSettingsPanel(const core::ComputationSettings& compSettings,
   auto& comp = result.compSettings;
   auto& rend = result.renderSettings;
 
-  // Status indicator + action buttons up top
   ImGui::Text("Статус расчёта:");
   ImGui::SameLine();
   drawStatusIndicator(solverStatus, lastDuration);
@@ -166,4 +163,4 @@ drawSettingsPanel(const core::ComputationSettings& compSettings,
   return result;
 }
 
-} // namespace ggm::gui
+}

@@ -23,15 +23,14 @@ constexpr std::string_view kVertexShaderSource = R"glsl(
 #version 330 core
 layout(location = 0) in vec2 aPos;
 layout(location = 1) in vec3 aColor;
-uniform vec4 uViewport;      // (minZ, minR, rangeZ, rangeR)
-uniform int  uUseVertexColor; // 0 = use uColor, 1 = use aColor
+uniform vec4 uViewport;
+uniform int  uUseVertexColor;
 out vec3 vColor;
 void main() {
     float ndcX = 2.0 * (aPos.x - uViewport.x) / uViewport.z - 1.0;
     float ndcY = 2.0 * (aPos.y - uViewport.y) / uViewport.w - 1.0;
     gl_Position = vec4(ndcX, ndcY, 0.0, 1.0);
     vColor = aColor;
-    // Silence warnings when not used.
     if (uUseVertexColor == 0) { vColor = vec3(0.0); }
 }
 )glsl";
@@ -95,15 +94,15 @@ viridisColor(float t) noexcept
 {
   t = std::clamp(t, 0.0F, 1.0F);
   static constexpr auto kStops = std::to_array<Rgb>({
-    {0.267F, 0.005F, 0.329F}, // 0.000
-    {0.275F, 0.125F, 0.474F}, // 0.125
-    {0.230F, 0.318F, 0.545F}, // 0.250
-    {0.173F, 0.449F, 0.558F}, // 0.375
-    {0.128F, 0.567F, 0.551F}, // 0.500
-    {0.135F, 0.659F, 0.518F}, // 0.625
-    {0.267F, 0.749F, 0.440F}, // 0.750
-    {0.526F, 0.830F, 0.288F}, // 0.875
-    {0.993F, 0.906F, 0.144F}, // 1.000
+    {0.267F, 0.005F, 0.329F},
+    {0.275F, 0.125F, 0.474F},
+    {0.230F, 0.318F, 0.545F},
+    {0.173F, 0.449F, 0.558F},
+    {0.128F, 0.567F, 0.551F},
+    {0.135F, 0.659F, 0.518F},
+    {0.267F, 0.749F, 0.440F},
+    {0.526F, 0.830F, 0.288F},
+    {0.993F, 0.906F, 0.144F},
   });
 
   const auto scaled = t * static_cast<float>(kStops.size() - 1U);
@@ -251,7 +250,7 @@ public:
   {
     glUniform1i(uniforms_.useVertexColor, enabled ? 1 : 0);
     if (enabled) {
-      // Interleaved layout: 2 floats pos + 3 floats color.
+
       glVertexAttribPointer(
         0, 2, GL_FLOAT, GL_FALSE, 5 * static_cast<GLsizei>(sizeof(float)), nullptr);
       glVertexAttribPointer(1,
@@ -262,7 +261,7 @@ public:
                             reinterpret_cast<const void*>(2 * sizeof(float)));
       glEnableVertexAttribArray(1);
     } else {
-      // Position-only layout: 2 floats per vertex.
+
       glVertexAttribPointer(
         0, 2, GL_FLOAT, GL_FALSE, 2 * static_cast<GLsizei>(sizeof(float)), nullptr);
       glDisableVertexAttribArray(1);
@@ -290,9 +289,6 @@ public:
     drawVertices(scratchVertices_, mode, 2);
   }
 
-  // Draws from interleaved [pos_x, pos_y, r, g, b] vertices. `mode` =
-  // GL_LINE_STRIP / GL_TRIANGLES / etc. Caller must have enabled vertex
-  // color via setUseVertexColor(true).
   void drawColoredVertices(const VertexSpan vertices, const GLenum mode) const noexcept
   {
     drawVertices(vertices, mode, 5);
@@ -492,7 +488,6 @@ maxStreamlineSpeed(const core::FlowResults& flow) noexcept
   return peak > 0.0 ? peak : 1.0;
 }
 
-// Append [x, y, r, g, b] to `out`.
 inline void
 appendColoredVertex(std::vector<float>& out, double x, double y, Rgb color)
 {
@@ -503,24 +498,16 @@ appendColoredVertex(std::vector<float>& out, double x, double y, Rgb color)
   out.push_back(color.b);
 }
 
-// Renders the full FEM channel as a filled triangle mesh (grid.triangles),
-// each node tinted by the |V| of its nearest streamline sample. This fills
-// the entire region between hub and shroud — including the narrow bands
-// the per-streamline strips used to miss.
 void
 drawVelocityHeatmap(const core::FlowResults& flow,
                     double peakSpeed,
                     const DrawSession& drawSession) noexcept
 {
   const auto& grid = flow.solution.grid;
-  if (grid.nodes.empty() || grid.triangles.empty() || flow.velocities.empty() ||
-      peakSpeed <= 0.0) {
+  if (grid.nodes.empty() || grid.triangles.empty() || flow.velocities.empty() || peakSpeed <= 0.0) {
     return;
   }
 
-  // Per-node speed via nearest streamline sample. O(N·M) per frame; for
-  // the current grid sizes (nh·m ≈ 7k nodes × ≈500 samples ≈ 3.5M distance
-  // checks) this is a few ms on a modern CPU — acceptable on the UI thread.
   std::vector<float> nodeSpeed(grid.nodes.size(), 0.0F);
   for (std::size_t n = 0; n < grid.nodes.size(); ++n) {
     const auto& node = grid.nodes[n];
@@ -655,7 +642,7 @@ drawGeometryCurves(const core::MeridionalGeometry& geom,
   drawSession.drawPolyline(geom.shroudCurve);
 }
 
-} // namespace
+}
 
 GeometryRenderer::~GeometryRenderer()
 {
@@ -739,8 +726,7 @@ GeometryRenderer::initGl() noexcept
 
   const auto viewportUniformLocation = glGetUniformLocation(shaderProgram, "uViewport");
   const auto colorUniformLocation = glGetUniformLocation(shaderProgram, "uColor");
-  const auto useVertexColorUniformLocation =
-    glGetUniformLocation(shaderProgram, "uUseVertexColor");
+  const auto useVertexColorUniformLocation = glGetUniformLocation(shaderProgram, "uUseVertexColor");
   const auto alphaUniformLocation = glGetUniformLocation(shaderProgram, "uAlpha");
   if (viewportUniformLocation < 0 || colorUniformLocation < 0 ||
       useVertexColorUniformLocation < 0 || alphaUniformLocation < 0) {
@@ -815,7 +801,8 @@ GeometryRenderer::render(const core::MeridionalGeometry& geom,
     .useVertexColor = useVertexColorUniformLocation_,
     .alpha = alphaUniformLocation_,
   };
-  auto drawSession = DrawSession{shaderProgram_, vao_, vbo_, uniforms, maxLineWidth_, scratchVertices_};
+  auto drawSession =
+    DrawSession{shaderProgram_, vao_, vbo_, uniforms, maxLineWidth_, scratchVertices_};
   drawSession.setViewport(viewport);
 
   if (settings.showCoordGrid) {
@@ -862,4 +849,4 @@ GeometryRenderer::destroy() noexcept
   maxLineWidth_ = kDefaultLineWidth;
 }
 
-} // namespace ggm::gui
+}

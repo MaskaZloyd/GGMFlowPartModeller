@@ -41,9 +41,7 @@ sanitizeAreaValue(double value) noexcept
 }
 
 [[nodiscard]] double
-filteredEndpointDerivative(double derivative,
-                           double adjacentSlope,
-                           double nextSlope) noexcept
+filteredEndpointDerivative(double derivative, double adjacentSlope, double nextSlope) noexcept
 {
   if (sign(derivative) != sign(adjacentSlope)) {
     return 0.0;
@@ -140,12 +138,12 @@ pchipEvaluate(std::span<const TargetAreaPoint> points,
   const double h10 = t3 - (2.0 * t2) + t;
   const double h01 = (-2.0 * t3) + (3.0 * t2);
   const double h11 = t3 - t2;
-  const double value = (h00 * left.value) + (h10 * dx * leftDerivative) +
-                       (h01 * right.value) + (h11 * dx * rightDerivative);
+  const double value = (h00 * left.value) + (h10 * dx * leftDerivative) + (h01 * right.value) +
+                       (h11 * dx * rightDerivative);
   return sanitizeAreaValue(value);
 }
 
-} // namespace
+}
 
 TargetAreaCurve::TargetAreaCurve() : points_{{0.0, 1.0}, {1.0, 1.0}} {}
 
@@ -263,4 +261,4 @@ TargetAreaCurve::isValid() const noexcept
   return true;
 }
 
-} // namespace ggm::core
+}

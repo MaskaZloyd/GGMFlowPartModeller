@@ -79,8 +79,6 @@ drawStatusLine(const ReverseDesignPanelState& state, const core::SolverStatus op
   style::drawColoredStatusLine(color, text.c_str());
 }
 
-// Local wrappers that hide the DragResult → bool conversion and let call
-// sites stay short.
 bool
 fixedDrag(const char* id,
           const char* label,
@@ -236,7 +234,6 @@ submitOptimization(ReverseDesignPanelState& state)
     return;
   }
 
-  // Anchor absolute scale: outlet flow area ≈ π·D₂·b₂ (cylindrical periphery).
   auto optimizationSettings = state.optimizationSettings;
   optimizationSettings.referenceOutletArea =
     std::numbers::pi * state.currentParams.d2 * state.currentParams.b2;
@@ -267,8 +264,8 @@ pollOptimization(ReverseDesignPanelState& state)
 
   applyPreviewResult(state, std::move(result), true);
   const auto elapsed = state.asyncOptimizer->lastDuration();
-  state.statusMessage = std::string("Оптимизация завершена за ") +
-                        std::to_string(elapsed.count()) + std::string(" мс.");
+  state.statusMessage = std::string("Оптимизация завершена за ") + std::to_string(elapsed.count()) +
+                        std::string(" мс.");
 }
 
 void
@@ -425,8 +422,7 @@ drawOptimizationSettings(ReverseDesignPanelState& state)
                0,
                256,
                "0 = авто: 4 + ⌊3·ln N⌋, где N — число активных переменных");
-  fixedDragInt(
-    "gen", "generations", &opt.maxGenerations, 1, 500, "Число поколений CMA-ES");
+  fixedDragInt("gen", "generations", &opt.maxGenerations, 1, 500, "Число поколений CMA-ES");
   fixedDragInt("polish",
                "LM polish",
                &opt.localPolishIterations,
@@ -480,14 +476,8 @@ drawOptimizationSettings(ReverseDesignPanelState& state)
 
   ImGui::Spacing();
   ImGui::TextDisabled("Веса в целевой функции");
-  fixedDrag("aw",
-            "area weight",
-            &opt.areaWeight,
-            &ZERO,
-            &AREA_MAX,
-            "%.3f",
-            0.01F,
-            kAreaWeightTooltip);
+  fixedDrag(
+    "aw", "area weight", &opt.areaWeight, &ZERO, &AREA_MAX, "%.3f", 0.01F, kAreaWeightTooltip);
   fixedDrag("tpw",
             "target point weight",
             &opt.targetPointWeight,
@@ -551,8 +541,6 @@ drawModeSection(ReverseDesignPanelState& state)
 
   ImGui::Spacing();
 
-  // Summarize which variables are currently active. CMA-ES only moves the
-  // ones ticked in the "Границы поиска" editor.
   std::string activeList;
   int activeCount = 0;
   for (const auto& var : core::allDesignVariables()) {
@@ -569,10 +557,8 @@ drawModeSection(ReverseDesignPanelState& state)
     ImGui::TextColored(style::PANEL_COLOR_WARN,
                        "⚠ Ни одна переменная не выбрана — CMA-ES не сможет двигаться.");
   } else {
-    ImGui::TextColored(style::PANEL_COLOR_INFO,
-                       "Активные переменные (%d): %s",
-                       activeCount,
-                       activeList.c_str());
+    ImGui::TextColored(
+      style::PANEL_COLOR_INFO, "Активные переменные (%d): %s", activeCount, activeList.c_str());
   }
 }
 
@@ -595,8 +581,7 @@ drawDiagnostics(const ReverseDesignPanelState& state)
     labelValueRow("Smoothness", "%.6f", state.currentObjective.smoothnessPenalty);
     labelValueRow("Constraints", "%.6f", state.currentObjective.constraintPenalty);
     if (state.hasOptimizationResult) {
-      labelValueRow(
-        "Converged", "%s", state.lastOptimizationConverged ? "да" : "нет");
+      labelValueRow("Converged", "%s", state.lastOptimizationConverged ? "да" : "нет");
       labelValueRow("Generations", "%d", state.lastOptimizationGenerations);
     }
     ImGui::EndTable();
@@ -645,7 +630,6 @@ drawControlsWindow(ReverseDesignPanelState& state,
   const auto optimizerStatus = state.asyncOptimizer->status();
   const bool optimizing = optimizerStatus == core::SolverStatus::Running;
 
-  // Persistent status strip at the top for visibility during long runs.
   drawStatusLine(state, optimizerStatus);
   ImGui::Separator();
 
@@ -799,7 +783,7 @@ drawComparisonWindow(ReverseDesignPanelState& state, const unsigned int dockspac
   ImGui::End();
 }
 
-} // namespace
+}
 
 ReverseDesignPanelResult
 drawReverseDesignPanel(ReverseDesignPanelState& state,
@@ -838,4 +822,4 @@ drawReverseDesignPanel(ReverseDesignPanelState& state,
   return result;
 }
 
-} // namespace ggm::gui
+}

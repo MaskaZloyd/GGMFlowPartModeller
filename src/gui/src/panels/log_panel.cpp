@@ -34,4 +34,4 @@ drawLogPanel(ImGuiID dockspaceId) noexcept
   ImGui::End();
 }
 
-} // namespace ggm::gui
+}

@@ -1,10 +1,4 @@
-// Stand-alone benchmark binary. Not a CTest test — invoked via
-// `perf record -- build/release/tests/bench_hotpaths`.
-//
-// Exercises the three hot paths identified in the refactoring spec:
-//   1. NURBS evaluation (1000 × 1500 points)
-//   2. Full solver pipeline (50 × buildStripGrid + solveFem)
-//   3. Flat vertex conversion (equivalent to drawPolyline inner loop)
+
 
 #include "core/fem_solver.hpp"
 #include "core/geometry.hpp"
@@ -109,7 +103,7 @@ benchFlatConvert()
               checksum); // NOLINT(cppcoreguidelines-pro-type-vararg)
 }
 
-} // namespace
+}
 
 int
 main()

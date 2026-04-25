@@ -24,7 +24,7 @@ class Application
 public:
   [[nodiscard]] static std::expected<Application, std::string> create() noexcept;
 
-  // Main loop. Returns exit code (0 on success).
+  /// Main loop. Returns exit code (0 on success).
   int run() noexcept;
 
   ~Application() = default;
@@ -57,4 +57,4 @@ private:
   ReverseDesignPanelState reverseDesignPanelState_;
 };
 
-} // namespace ggm::gui
+}

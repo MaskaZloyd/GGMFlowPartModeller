@@ -30,8 +30,6 @@ struct CachedTriangle
   math::Vec2 p1{0.0, 0.0};
   math::Vec2 p2{0.0, 0.0};
 
-  // grad(psi) = (dpsi/dz, dpsi/dr) in project length units.
-  // If project geometry is in mm, this gradient has units 1/mm.
   math::Vec2 elementGradPsi{0.0, 0.0};
 
   double area{0.0};
@@ -160,7 +158,6 @@ makeCachedTriangle(const FlowSolution& sol, int i0, int i1, int i2)
     return std::unexpected(CoreError::SolverFailed);
   }
 
-  // P1 basis gradients in physical project coordinates (z, r).
   math::Vec2 gradPhi0{p1.y() - p2.y(), p2.x() - p1.x()};
   math::Vec2 gradPhi1{p2.y() - p0.y(), p0.x() - p2.x()};
   math::Vec2 gradPhi2{p0.y() - p1.y(), p1.x() - p0.x()};
@@ -204,8 +201,6 @@ buildTriangleCache(const FlowSolution& sol)
   return cache;
 }
 
-// P1 FEM gives piecewise-constant gradients per triangle.
-// For smoother visualization, recover nodal gradients by area-weighted averaging.
 std::vector<math::Vec2>
 recoverNodalGradients(const std::vector<CachedTriangle>& cache, std::size_t numNodes)
 {
@@ -270,7 +265,6 @@ gradientAtPoint(const math::Vec2& p,
     return grad;
   }
 
-  // Fallback for smoothed streamlines that slightly leave the FEM cells.
   for (const auto& tri : cache) {
     const double distSq = pointTriangleDistanceSquared(p, tri.p0, tri.p1, tri.p2);
 
@@ -307,16 +301,6 @@ velocityFromGradient(const math::Vec2& point,
     return std::unexpected(CoreError::SolverFailed);
   }
 
-  // gradPsiProjectUnits = (dpsi/dz_u, dpsi/dr_u),
-  // where z_u, r_u are project coordinates.
-  //
-  // Convert to SI:
-  //
-  // z_m = z_u * lengthUnitToMeters
-  // r_m = r_u * lengthUnitToMeters
-  //
-  // dpsi/dz_m = dpsi/dz_u / lengthUnitToMeters
-  // dpsi/dr_m = dpsi/dr_u / lengthUnitToMeters
   const double psiZPerMeter = gradPsiProjectUnits.x() / lengthUnitToMeters;
   const double psiRPerMeter = gradPsiProjectUnits.y() / lengthUnitToMeters;
 
@@ -336,7 +320,7 @@ velocityFromGradient(const math::Vec2& point,
   return math::Vec2{vz, vr};
 }
 
-} // namespace
+}
 
 Result<std::vector<StreamlineVelocity>>
 computeStreamlineVelocities(const FlowSolution& sol,
@@ -430,4 +414,4 @@ computeStreamlineVelocities(const FlowSolution& sol,
   return results;
 }
 
-} // namespace ggm::core
+}

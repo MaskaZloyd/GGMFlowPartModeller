@@ -44,8 +44,6 @@ leftNormal(const math::Vec2& tangent) noexcept
   return {-tangent.y(), tangent.x()};
 }
 
-// Infinite line intersection:
-//   p0 + t * d0 = p1 + s * d1
 std::optional<math::Vec2>
 intersectLines(const math::Vec2& p0,
                const math::Vec2& d0,
@@ -68,7 +66,7 @@ isFiniteVec(const math::Vec2& v) noexcept
   return std::isfinite(v.x()) && std::isfinite(v.y());
 }
 
-} // namespace
+}
 
 Result<MeridionalGeometry>
 buildGeometry(const PumpParams& params)
@@ -78,26 +76,17 @@ buildGeometry(const PumpParams& params)
   const double al02 = params.al02Deg * DEG_TO_RAD;
   const double be1 = params.be1Deg * DEG_TO_RAD;
 
-  // Hub:
-  // be2 is the sweep from the first hub arc tangent to the outlet hub tangent.
   const double be2 = std::numbers::pi / 2.0 - be1 + al1;
 
-  // Shroud:
-  // be3Junction is the absolute tangent angle at the junction P7.
-  // be3Sweep is the actual sweep of the first shroud arc from inlet tangent to P7.
   const double be3Junction = params.be3RawDeg * DEG_TO_RAD;
   const double be3Sweep = be3Junction - al02;
 
-  // Outlet shroud tangent angle. This matches the old identity:
-  // be3Junction + be4 = pi/2 + al2
   const double outletShroudAngle = std::numbers::pi / 2.0 + al2;
   const double be4 = outletShroudAngle - be3Junction;
 
   if (be1 <= 0.0 || be2 <= 0.0 || be3Sweep <= 0.0 || be4 <= 0.0) {
     return std::unexpected(CoreError::GeometryBuildFailed);
   }
-
-  // ---- HUB geometry ----
 
   const math::Vec2 hubP0{0.0, params.dvt / 2.0};
   const math::Vec2 hubP1 = hubP0 + math::Vec2{params.xa, 0.0};
@@ -135,8 +124,6 @@ buildGeometry(const PumpParams& params)
   auto hubNurbs = math::buildFromSegments(hubSegments);
   auto hubCurve = math::evaluate(hubNurbs, 1500);
 
-  // ---- SHROUD geometry ----
-
   const math::Vec2 shrP9{0.0, params.din / 2.0};
   const math::Vec2 shrP5 = hubP4 - math::Vec2{params.b2, 0.0};
 
@@ -146,8 +133,6 @@ buildGeometry(const PumpParams& params)
   const math::Vec2 inletNormal = leftNormal(inletTangent);
   const math::Vec2 outletNormal = leftNormal(outletTangent);
 
-  // Common normal at the junction between the two shroud arcs.
-  // If tangent angle at P7 is beta, left normal is (-sin beta, cos beta).
   const math::Vec2 junctionNormal = leftNormal(unitFromAngle(be3Junction));
 
   const auto intersectionOpt = intersectLines(shrP9, inletTangent, shrP5, outletTangent);
@@ -158,22 +143,6 @@ buildGeometry(const PumpParams& params)
 
   const math::Vec2 tangentIntersection = *intersectionOpt;
 
-  // Unknowns:
-  //   shrP8 = tangentIntersection + distIn  * inletTangent
-  //   shrP6 = tangentIntersection + distOut * outletTangent
-  //
-  // Centers:
-  //   shrO3 = shrP8 + r3 * inletNormal
-  //   shrO4 = shrP6 + r4 * outletNormal
-  //
-  // G1 junction condition:
-  //   shrO4 - shrO3 = (r4 - r3) * junctionNormal
-  //
-  // Therefore:
-  //   -distIn * inletTangent + distOut * outletTangent =
-  //       (r4 - r3) * junctionNormal
-  //       + r3 * inletNormal
-  //       - r4 * outletNormal
   Eigen::Matrix2d matA;
   matA.col(0) = -inletTangent;
   matA.col(1) = outletTangent;
@@ -205,8 +174,6 @@ buildGeometry(const PumpParams& params)
 
   const math::Vec2 shrP7 = shrO3 - params.r3 * junctionNormal;
 
-  // Basic direction checks. If these fail, the input parameters describe an
-  // invalid or self-crossing meridional contour for this construction.
   if ((shrP8 - shrP9).dot(inletTangent) <= 0.0) {
     return std::unexpected(CoreError::GeometryBuildFailed);
   }
@@ -246,4 +213,4 @@ buildGeometry(const PumpParams& params)
   };
 }
 
-} // namespace ggm::core
+}

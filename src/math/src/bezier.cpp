@@ -54,4 +54,4 @@ evaluateSegment(const ArcBezier& seg, int numPoints) noexcept
   return result;
 }
 
-} // namespace ggm::math
+}

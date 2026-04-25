@@ -13,10 +13,10 @@
 #include <numeric>
 #include <random>
 #include <span>
-
-#include <Eigen/Dense>
 #include <utility>
 #include <vector>
+
+#include <Eigen/Dense>
 
 namespace ggm::core {
 
@@ -29,61 +29,61 @@ constexpr int kObjectiveM = 48;
 constexpr double kConstraintTolerance = 1e-6;
 
 constexpr auto kAllDesignVariables = std::to_array<DesignVariable>({
-  { "din",
-    &PumpParams::din,
-    &GeometryDesignBounds::dinMin,
-    &GeometryDesignBounds::dinMax,
-    &GeometryVariableMask::din },
-  { "b2",
-    &PumpParams::b2,
-    &GeometryDesignBounds::b2Min,
-    &GeometryDesignBounds::b2Max,
-    &GeometryVariableMask::b2 },
-  { "r1",
-    &PumpParams::r1,
-    &GeometryDesignBounds::r1Min,
-    &GeometryDesignBounds::r1Max,
-    &GeometryVariableMask::r1 },
-  { "r2",
-    &PumpParams::r2,
-    &GeometryDesignBounds::r2Min,
-    &GeometryDesignBounds::r2Max,
-    &GeometryVariableMask::r2 },
-  { "r3",
-    &PumpParams::r3,
-    &GeometryDesignBounds::r3Min,
-    &GeometryDesignBounds::r3Max,
-    &GeometryVariableMask::r3 },
-  { "r4",
-    &PumpParams::r4,
-    &GeometryDesignBounds::r4Min,
-    &GeometryDesignBounds::r4Max,
-    &GeometryVariableMask::r4 },
-  { "al1",
-    &PumpParams::al1Deg,
-    &GeometryDesignBounds::al1DegMin,
-    &GeometryDesignBounds::al1DegMax,
-    &GeometryVariableMask::al1 },
-  { "al2",
-    &PumpParams::al2Deg,
-    &GeometryDesignBounds::al2DegMin,
-    &GeometryDesignBounds::al2DegMax,
-    &GeometryVariableMask::al2 },
-  { "al02",
-    &PumpParams::al02Deg,
-    &GeometryDesignBounds::al02DegMin,
-    &GeometryDesignBounds::al02DegMax,
-    &GeometryVariableMask::al02 },
-  { "be1",
-    &PumpParams::be1Deg,
-    &GeometryDesignBounds::be1DegMin,
-    &GeometryDesignBounds::be1DegMax,
-    &GeometryVariableMask::be1 },
-  { "be3",
-    &PumpParams::be3RawDeg,
-    &GeometryDesignBounds::be3RawDegMin,
-    &GeometryDesignBounds::be3RawDegMax,
-    &GeometryVariableMask::be3 },
+  {"din",
+   &PumpParams::din,
+   &GeometryDesignBounds::dinMin,
+   &GeometryDesignBounds::dinMax,
+   &GeometryVariableMask::din},
+  {"b2",
+   &PumpParams::b2,
+   &GeometryDesignBounds::b2Min,
+   &GeometryDesignBounds::b2Max,
+   &GeometryVariableMask::b2},
+  {"r1",
+   &PumpParams::r1,
+   &GeometryDesignBounds::r1Min,
+   &GeometryDesignBounds::r1Max,
+   &GeometryVariableMask::r1},
+  {"r2",
+   &PumpParams::r2,
+   &GeometryDesignBounds::r2Min,
+   &GeometryDesignBounds::r2Max,
+   &GeometryVariableMask::r2},
+  {"r3",
+   &PumpParams::r3,
+   &GeometryDesignBounds::r3Min,
+   &GeometryDesignBounds::r3Max,
+   &GeometryVariableMask::r3},
+  {"r4",
+   &PumpParams::r4,
+   &GeometryDesignBounds::r4Min,
+   &GeometryDesignBounds::r4Max,
+   &GeometryVariableMask::r4},
+  {"al1",
+   &PumpParams::al1Deg,
+   &GeometryDesignBounds::al1DegMin,
+   &GeometryDesignBounds::al1DegMax,
+   &GeometryVariableMask::al1},
+  {"al2",
+   &PumpParams::al2Deg,
+   &GeometryDesignBounds::al2DegMin,
+   &GeometryDesignBounds::al2DegMax,
+   &GeometryVariableMask::al2},
+  {"al02",
+   &PumpParams::al02Deg,
+   &GeometryDesignBounds::al02DegMin,
+   &GeometryDesignBounds::al02DegMax,
+   &GeometryVariableMask::al02},
+  {"be1",
+   &PumpParams::be1Deg,
+   &GeometryDesignBounds::be1DegMin,
+   &GeometryDesignBounds::be1DegMax,
+   &GeometryVariableMask::be1},
+  {"be3",
+   &PumpParams::be3RawDeg,
+   &GeometryDesignBounds::be3RawDegMin,
+   &GeometryDesignBounds::be3RawDegMax,
+   &GeometryVariableMask::be3},
 });
 
 struct DesignVector
@@ -107,36 +107,33 @@ struct NormalizedAreaInterpolator
 {
   std::vector<double> xiNodes;
   std::vector<double> normalizedAreas;
-  double outletArea{ 0.0 };
+  double outletArea{0.0};
 };
 
 struct ObjectiveSample
 {
-  double xi{ 0.0 };
-  double weight{ 1.0 };
+  double xi{0.0};
+  double weight{1.0};
 };
 
 struct AreaObjectiveComponents
 {
   std::vector<double> weightedResiduals;
-  double areaError{ 0.0 };
-  double residualSlopePenalty{ 0.0 };
-  double monotonicityPenalty{ 0.0 };
+  double areaError{0.0};
+  double residualSlopePenalty{0.0};
+  double monotonicityPenalty{0.0};
 };
 
-} // namespace
+}
 
 std::span<const DesignVariable>
 allDesignVariables() noexcept
 {
-  return { kAllDesignVariables.data(), kAllDesignVariables.size() };
+  return {kAllDesignVariables.data(), kAllDesignVariables.size()};
 }
 
 namespace {
 
-// Returns only the variables whose enable-flag in the mask is true.
-// Returns a small scratch vector — allocations here are off the hot path
-// (once per optimize call, not per iteration).
 [[nodiscard]] std::vector<DesignVariable>
 enabledVariables(const GeometryVariableMask& mask)
 {
@@ -150,7 +147,7 @@ enabledVariables(const GeometryVariableMask& mask)
   return result;
 }
 
-} // namespace
+}
 
 namespace {
 
@@ -208,20 +205,18 @@ isSettingsValid(const GeometryOptimizationSettings& settings) noexcept
   return settings.sampleCount >= 2 && settings.maxGenerations >= 1 &&
          std::isfinite(settings.sigmaInitial) && settings.sigmaInitial > 0.0 &&
          settings.populationSize >= 0 && std::isfinite(settings.areaWeight) &&
-         settings.areaWeight >= 0.0 &&
-         std::isfinite(settings.residualSlopeWeight) && settings.residualSlopeWeight >= 0.0 &&
-         std::isfinite(settings.monotonicityWeight) && settings.monotonicityWeight >= 0.0 &&
-         std::isfinite(settings.smoothnessWeight) && settings.smoothnessWeight >= 0.0 &&
-         std::isfinite(settings.constraintWeight) && settings.constraintWeight >= 0.0 &&
-         std::isfinite(settings.targetPointWeight) && settings.targetPointWeight >= 0.0 &&
-         settings.localPolishIterations >= 0 &&
+         settings.areaWeight >= 0.0 && std::isfinite(settings.residualSlopeWeight) &&
+         settings.residualSlopeWeight >= 0.0 && std::isfinite(settings.monotonicityWeight) &&
+         settings.monotonicityWeight >= 0.0 && std::isfinite(settings.smoothnessWeight) &&
+         settings.smoothnessWeight >= 0.0 && std::isfinite(settings.constraintWeight) &&
+         settings.constraintWeight >= 0.0 && std::isfinite(settings.targetPointWeight) &&
+         settings.targetPointWeight >= 0.0 && settings.localPolishIterations >= 0 &&
          std::isfinite(settings.maxInvalidChordFraction) &&
          settings.maxInvalidChordFraction >= 0.0 && settings.maxInvalidChordFraction <= 1.0;
 }
 
 [[nodiscard]] bool
-areBoundsValid(const GeometryDesignBounds& bounds,
-               std::span<const DesignVariable> members) noexcept
+areBoundsValid(const GeometryDesignBounds& bounds, std::span<const DesignVariable> members) noexcept
 {
   for (const auto& member : members) {
     const double minValue = bounds.*(member.minBound);
@@ -276,9 +271,6 @@ decodeVectorToParams(const DesignVector& vector,
   params.d2 = baseParams.d2;
   params.dvt = baseParams.dvt;
 
-  // Hard constraint: din > dvt. Enforce even if the user dragged dinMin
-  // below dvt in the bounds editor — the geometry builder produces garbage
-  // otherwise.
   const double dinFloor = params.dvt * 1.001;
   if (params.din < dinFloor) {
     params.din = dinFloor;
@@ -306,9 +298,6 @@ buildEvaluationArtifacts(const PumpParams& params)
     return std::unexpected(gridResult.error());
   }
 
-  // There is no separate "fast profile without FEM" path in the project yet,
-  // so candidate validation always runs through the same FEM + area-profile
-  // pipeline as the production solver.
   auto flowResult = solveFem(std::move(*gridResult));
   if (!flowResult) {
     return std::unexpected(flowResult.error());
@@ -465,21 +454,20 @@ makeFailureObjective() noexcept
   };
 }
 
-} // namespace
+}
 
 GeometryDesignBounds
 makeBoundsFromValues(const PumpParams& params) noexcept
 {
-  // ±50 % of each current value. `halfWidth` falls back to 1 for near-zero
-  // params so the interval is non-degenerate.
+
   const auto interval = [](double value) {
     const double halfWidth = std::max(std::abs(value) * 0.5, 1.0);
-    return std::pair<double, double>{ value - halfWidth, value + halfWidth };
+    return std::pair<double, double>{value - halfWidth, value + halfWidth};
   };
 
   GeometryDesignBounds b{};
   std::tie(b.dinMin, b.dinMax) = interval(params.din);
-  // Hard geometric constraint: din must stay strictly greater than dvt.
+
   const double dinFloor = params.dvt * 1.001;
   b.dinMin = std::max(b.dinMin, dinFloor);
   if (b.dinMax <= b.dinMin) {
@@ -616,7 +604,7 @@ evaluateNormalizedAreaAtXi(const NormalizedAreaInterpolator& interpolator, doubl
   }
 
   const double clampedXi = std::clamp(std::isfinite(xi) ? xi : 0.0, 0.0, 1.0);
-  auto segmentIndex = std::size_t{ 0U };
+  auto segmentIndex = std::size_t{0U};
   while (segmentIndex + 1U < interpolator.xiNodes.size() - 1U &&
          interpolator.xiNodes[segmentIndex + 1U] < clampedXi) {
     ++segmentIndex;
@@ -645,7 +633,7 @@ makeObjectiveSamples(const TargetAreaCurve& target, const GeometryOptimizationSe
   for (int sampleIndex = 0; sampleIndex < settings.sampleCount; ++sampleIndex) {
     const double xi =
       static_cast<double>(sampleIndex) / static_cast<double>(settings.sampleCount - 1);
-    samples.push_back(ObjectiveSample{ .xi = xi, .weight = 1.0 });
+    samples.push_back(ObjectiveSample{.xi = xi, .weight = 1.0});
   }
 
   if (settings.targetPointWeight > 0.0) {
@@ -661,9 +649,7 @@ makeObjectiveSamples(const TargetAreaCurve& target, const GeometryOptimizationSe
 
   std::sort(samples.begin(),
             samples.end(),
-            [](const ObjectiveSample& lhs, const ObjectiveSample& rhs) {
-              return lhs.xi < rhs.xi;
-            });
+            [](const ObjectiveSample& lhs, const ObjectiveSample& rhs) { return lhs.xi < rhs.xi; });
 
   std::vector<ObjectiveSample> merged;
   merged.reserve(samples.size());
@@ -716,8 +702,8 @@ evaluateAreaObjectiveComponents(const NormalizedAreaInterpolator& interpolator,
     if (settings.areaWeight > 0.0) {
       const double scale = std::sqrt(settings.areaWeight / totalWeight);
       for (std::size_t i = 0; i < samples.size(); ++i) {
-        components.weightedResiduals.push_back(
-          std::sqrt(samples[i].weight) * scale * (currentValues[i] - targetValues[i]));
+        components.weightedResiduals.push_back(std::sqrt(samples[i].weight) * scale *
+                                               (currentValues[i] - targetValues[i]));
       }
     }
   }
@@ -777,10 +763,8 @@ evaluateAreaObjectiveComponents(const NormalizedAreaInterpolator& interpolator,
     }
   };
 
-  appendWeightedResiduals(slopeDiffs,
-                          slopeWeights,
-                          settings.residualSlopeWeight,
-                          components.residualSlopePenalty);
+  appendWeightedResiduals(
+    slopeDiffs, slopeWeights, settings.residualSlopeWeight, components.residualSlopePenalty);
   appendWeightedResiduals(monotonicityViolations,
                           monotonicityWeights,
                           settings.monotonicityWeight,
@@ -838,7 +822,7 @@ evaluateObjectiveFromArtifacts(const EvaluationArtifacts& artifacts,
   };
 }
 
-} // namespace
+}
 
 Result<std::vector<double>>
 normalizedAreaSamples(const AreaProfile& profile, const int sampleCount)
@@ -907,32 +891,28 @@ evaluateGeometryCandidate(const PumpParams& params,
 
 namespace {
 
-// CMA-ES driver state. Kept to-gether so the main function stays
-// readable and the heavy linear-algebra lives in one place.
 struct CmaEsState
 {
-  Eigen::VectorXd mean;       // current distribution mean, in normalized coords
-  Eigen::MatrixXd covariance; // covariance matrix C
-  Eigen::MatrixXd eigenVec;   // eigenvectors of C (B)
-  Eigen::VectorXd eigenVal;   // sqrt of eigenvalues of C (D)
-  Eigen::VectorXd pathSigma;  // evolution path for σ
-  Eigen::VectorXd pathC;      // evolution path for C
-  double sigma{ 0.0 };        // step-size
+  Eigen::VectorXd mean;
+  Eigen::MatrixXd covariance;
+  Eigen::MatrixXd eigenVec;
+  Eigen::VectorXd eigenVal;
+  Eigen::VectorXd pathSigma;
+  Eigen::VectorXd pathC;
+  double sigma{0.0};
 
-  // Strategy parameters derived from dimensionality N and population λ.
-  int lambda{ 0 };
-  int mu{ 0 };
+  int lambda{0};
+  int mu{0};
   Eigen::VectorXd weights;
-  double muEff{ 0.0 };
-  double cSigma{ 0.0 };
-  double dSigma{ 0.0 };
-  double cCov{ 0.0 };    // c_c in Hansen's notation
-  double c1{ 0.0 };
-  double cMu{ 0.0 };
-  double expectedNorm{ 0.0 }; // E[||N(0, I)||]
+  double muEff{0.0};
+  double cSigma{0.0};
+  double dSigma{0.0};
+  double cCov{0.0};
+  double c1{0.0};
+  double cMu{0.0};
+  double expectedNorm{0.0};
 };
 
-// Sets up λ, μ, weights, and CSA/C update constants from N.
 CmaEsState
 makeCmaEsState(int dim, int lambdaOverride)
 {
@@ -955,8 +935,7 @@ makeCmaEsState(int dim, int lambdaOverride)
   s.muEff = 1.0 / wSq;
 
   s.cSigma = (s.muEff + 2.0) / (N + s.muEff + 5.0);
-  s.dSigma =
-    1.0 + (2.0 * std::max(0.0, std::sqrt((s.muEff - 1.0) / (N + 1.0)) - 1.0)) + s.cSigma;
+  s.dSigma = 1.0 + (2.0 * std::max(0.0, std::sqrt((s.muEff - 1.0) / (N + 1.0)) - 1.0)) + s.cSigma;
   s.cCov = (4.0 + s.muEff / N) / (N + 4.0 + 2.0 * s.muEff / N);
   s.c1 = 2.0 / (((N + 1.3) * (N + 1.3)) + s.muEff);
   const double rankMu = 2.0 * (s.muEff - 2.0 + 1.0 / s.muEff) / (((N + 2.0) * (N + 2.0)) + s.muEff);
@@ -973,17 +952,15 @@ makeCmaEsState(int dim, int lambdaOverride)
   return s;
 }
 
-// Refresh B, D from the current C. Called periodically (not every gen) to
-// amortize the O(N³) eigendecomposition.
 void
 refreshEigenDecomposition(CmaEsState& s)
 {
-  // Symmetrize to fight accumulated floating-point drift.
+
   s.covariance = 0.5 * (s.covariance + s.covariance.transpose());
 
   Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> solver(s.covariance);
   if (solver.info() != Eigen::Success) {
-    // Safeguard: fall back to identity.
+
     const int n = static_cast<int>(s.covariance.rows());
     s.covariance = Eigen::MatrixXd::Identity(n, n);
     s.eigenVec = Eigen::MatrixXd::Identity(n, n);
@@ -993,14 +970,14 @@ refreshEigenDecomposition(CmaEsState& s)
 
   s.eigenVec = solver.eigenvectors();
   Eigen::VectorXd values = solver.eigenvalues();
-  // Clamp tiny / negative eigenvalues to keep the sqrt well-defined.
+
   for (int i = 0; i < values.size(); ++i) {
     values(i) = std::max(values(i), 1e-20);
   }
   s.eigenVal = values.array().sqrt();
 }
 
-} // namespace
+}
 
 Result<GeometryOptimizationResult>
 optimizeGeometryForTargetArea(const PumpParams& initialParams,
@@ -1019,7 +996,7 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
 
   const auto activeVars = enabledVariables(settings.mask);
   if (activeVars.empty()) {
-    // Nothing to optimize — return the initial state as the "optimized" result.
+
     auto direct = evaluateGeometryCandidate(initialParams, target, settings);
     if (!direct) {
       return std::unexpected(direct.error());
@@ -1029,7 +1006,7 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
     return direct;
   }
 
-  std::span<const DesignVariable> members{ activeVars.data(), activeVars.size() };
+  std::span<const DesignVariable> members{activeVars.data(), activeVars.size()};
 
   if (!areBoundsValid(bounds, members)) {
     return std::unexpected(CoreError::InvalidParameter);
@@ -1037,8 +1014,6 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
 
   const int dim = static_cast<int>(members.size());
 
-  // Normalize design space so each coordinate lives in roughly [-1, 1].
-  // Midpoint maps to 0; a sampled value x_raw = midpoint + halfRange * x_norm.
   Eigen::VectorXd midpoint(dim);
   Eigen::VectorXd halfRange(dim);
   for (int i = 0; i < dim; ++i) {
@@ -1062,7 +1037,6 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
     return v;
   };
 
-  // Initial mean: the imported params, clamped inside bounds, then normalized.
   const DesignVector initialEncoded = encodeParamsToVector(initialParams, bounds, members);
   CmaEsState cma = makeCmaEsState(dim, settings.populationSize);
   cma.mean.resize(dim);
@@ -1072,7 +1046,6 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
   cma.sigma = settings.sigmaInitial;
   refreshEigenDecomposition(cma);
 
-  // Evaluate initial point for the "best so far" seed.
   DesignVector bestDesign = initialEncoded;
   auto bestObjective = evaluateGeometryObjective(
     decodeVectorToParams(bestDesign, initialParams, bounds, members), target, settings);
@@ -1083,16 +1056,14 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
   std::mt19937 rng(settings.seed);
   std::normal_distribution<double> standardNormal(0.0, 1.0);
 
-  // How often (in generations) to refresh B, D. Hansen's suggested heuristic:
-  // recompute every 1 / (10·dim·(c1+cμ)) generations — for our N ≤ 10 this is ~1.
   const int eigenRefreshInterval =
     std::max(1, static_cast<int>(std::floor(1.0 / (10.0 * dim * (cma.c1 + cma.cMu)))));
 
   struct Sample
   {
-    Eigen::VectorXd z;    // raw normal draw
-    Eigen::VectorXd y;    // y = B·D·z
-    Eigen::VectorXd x;    // x = mean + σ·y, clamped to [-1, 1]
+    Eigen::VectorXd z;
+    Eigen::VectorXd y;
+    Eigen::VectorXd x;
     GeometryObjectiveBreakdown objective;
   };
 
@@ -1104,7 +1075,6 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
       return std::unexpected(CoreError::Cancelled);
     }
 
-    // --- Sample λ candidates ----------------------------------------------
     for (auto& sample : samples) {
       sample.z.resize(dim);
       for (int i = 0; i < dim; ++i) {
@@ -1112,16 +1082,14 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
       }
       sample.y = cma.eigenVec * (cma.eigenVal.asDiagonal() * sample.z);
       sample.x = cma.mean + cma.sigma * sample.y;
-      // Clamp to the normalized box [-1, 1] so decode() produces in-range params.
+
       for (int i = 0; i < dim; ++i) {
         sample.x(i) = std::clamp(sample.x(i), -1.0, 1.0);
       }
-      // The actual candidate may be clipped by the box. Keep the CMA paths and
-      // covariance update consistent with the step that was really evaluated.
+
       sample.y = (sample.x - cma.mean) / cma.sigma;
     }
 
-    // --- Evaluate ---------------------------------------------------------
     for (auto& sample : samples) {
       if (cancelled()) {
         return std::unexpected(CoreError::Cancelled);
@@ -1135,12 +1103,10 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
       }
     }
 
-    // --- Sort by fitness (ascending) --------------------------------------
     std::sort(samples.begin(), samples.end(), [](const Sample& a, const Sample& b) {
       return a.objective.total < b.objective.total;
     });
 
-    // --- Update mean: weighted recombination of the μ best ---------------
     Eigen::VectorXd newMean = Eigen::VectorXd::Zero(dim);
     Eigen::VectorXd yMean = Eigen::VectorXd::Zero(dim);
     for (int i = 0; i < cma.mu; ++i) {
@@ -1148,15 +1114,12 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
       yMean += cma.weights(i) * samples[static_cast<std::size_t>(i)].y;
     }
 
-    // C^(-1/2) · yMean = B · diag(1/D) · Bᵀ · yMean
     Eigen::VectorXd cInvSqrtY =
       cma.eigenVec *
       (cma.eigenVal.array().inverse().matrix().asDiagonal() * (cma.eigenVec.transpose() * yMean));
 
-    // --- Evolution paths --------------------------------------------------
-    cma.pathSigma =
-      ((1.0 - cma.cSigma) * cma.pathSigma) +
-      (std::sqrt(cma.cSigma * (2.0 - cma.cSigma) * cma.muEff) * cInvSqrtY);
+    cma.pathSigma = ((1.0 - cma.cSigma) * cma.pathSigma) +
+                    (std::sqrt(cma.cSigma * (2.0 - cma.cSigma) * cma.muEff) * cInvSqrtY);
 
     const double psNormSq = cma.pathSigma.squaredNorm();
     const double hsigThreshold =
@@ -1167,7 +1130,6 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
     cma.pathC = ((1.0 - cma.cCov) * cma.pathC) +
                 ((hSig ? 1.0 : 0.0) * std::sqrt(cma.cCov * (2.0 - cma.cCov) * cma.muEff) * yMean);
 
-    // --- Covariance update: rank-1 + rank-μ -------------------------------
     Eigen::MatrixXd rankMu = Eigen::MatrixXd::Zero(dim, dim);
     for (int i = 0; i < cma.mu; ++i) {
       const auto& yi = samples[static_cast<std::size_t>(i)].y;
@@ -1175,15 +1137,14 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
     }
 
     const double hSigCorrection = (hSig ? 0.0 : cma.cCov * (2.0 - cma.cCov));
-    cma.covariance = ((1.0 - cma.c1 - cma.cMu) * cma.covariance) +
-                     (cma.c1 * ((cma.pathC * cma.pathC.transpose()) +
-                                (hSigCorrection * cma.covariance))) +
-                     (cma.cMu * rankMu);
+    cma.covariance =
+      ((1.0 - cma.c1 - cma.cMu) * cma.covariance) +
+      (cma.c1 * ((cma.pathC * cma.pathC.transpose()) + (hSigCorrection * cma.covariance))) +
+      (cma.cMu * rankMu);
 
-    // --- σ update (CSA) ---------------------------------------------------
     cma.sigma *=
       std::exp((cma.cSigma / cma.dSigma) * ((std::sqrt(psNormSq) / cma.expectedNorm) - 1.0));
-    // Guardrails: σ should not explode or vanish.
+
     cma.sigma = std::clamp(cma.sigma, 1e-8, 10.0);
 
     cma.mean = newMean;
@@ -1289,8 +1250,8 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
               minusResult->residuals.size() == current.residuals.size()) {
             for (int row = 0; row < residualCount; ++row) {
               const auto idx = static_cast<std::size_t>(row);
-              jacobian(row, col) = (plusResult->residuals[idx] - minusResult->residuals[idx]) /
-                                   centralDenom;
+              jacobian(row, col) =
+                (plusResult->residuals[idx] - minusResult->residuals[idx]) / centralDenom;
             }
             continue;
           }
@@ -1368,4 +1329,4 @@ optimizeGeometryForTargetArea(const PumpParams& initialParams,
   return result;
 }
 
-} // namespace ggm::core
+}

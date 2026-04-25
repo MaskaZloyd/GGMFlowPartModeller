@@ -18,7 +18,7 @@ public:
   [[nodiscard]] bool canUndo() const noexcept;
   [[nodiscard]] bool canRedo() const noexcept;
 
-  // Returns the params to restore. Caller must check canUndo()/canRedo() first.
+  /// Returns the params to restore. Caller must check canUndo()/canRedo() first.
   [[nodiscard]] const core::PumpParams& undoParams() const noexcept;
   [[nodiscard]] const core::PumpParams& redoParams() const noexcept;
 
@@ -33,4 +33,4 @@ private:
   int cursor_ = -1;
 };
 
-} // namespace ggm::gui
+}

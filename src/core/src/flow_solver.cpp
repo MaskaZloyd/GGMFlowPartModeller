@@ -18,10 +18,6 @@ namespace {
 
 constexpr double kGeometryLengthUnitToMeters = 1e-3;
 
-// Append a point past the polyline's last vertex along its tangent direction
-// so the FEM domain extends a few millimeters past the outlet radius. This
-// lets the stream function boundary "breathe" and removes the outlet-edge
-// artifact that would otherwise compress streamlines toward the shroud.
 void
 extendPolylineAtEnd(std::vector<math::Vec2>& poly, double extraDist)
 {
@@ -39,8 +35,6 @@ extendPolylineAtEnd(std::vector<math::Vec2>& poly, double extraDist)
   poly.push_back(last + extraDist * dir);
 }
 
-// Interpolate point onto r == rMax on the segment (pa, pb). Assumes pa.y
-// and pb.y straddle rMax.
 math::Vec2
 interpR(const math::Vec2& pa, const math::Vec2& pb, double rMax)
 {
@@ -52,17 +46,13 @@ interpR(const math::Vec2& pa, const math::Vec2& pb, double rMax)
   return (1.0 - t) * pa + t * pb;
 }
 
-// Keep only the portion of the polyline with r <= rMax, direction-agnostic.
-// The marching squares tracer may emit polylines ordered either inlet->outlet
-// or outlet->inlet, so we must scan for any contiguous in-domain segment
-// and clip both ends with linear interpolation onto r == rMax.
 void
 clipPolylineAtRMax(std::vector<math::Vec2>& poly, double rMax)
 {
   if (poly.empty()) {
     return;
   }
-  // Find first and last indices with y <= rMax.
+
   int first = -1;
   int last = -1;
   for (int i = 0; i < static_cast<int>(poly.size()); ++i) {
@@ -81,7 +71,6 @@ clipPolylineAtRMax(std::vector<math::Vec2>& poly, double rMax)
   std::vector<math::Vec2> out;
   out.reserve(poly.size());
 
-  // Optional head-interpolation if the polyline enters the domain.
   if (first > 0) {
     out.push_back(interpR(
       poly[static_cast<std::size_t>(first - 1)], poly[static_cast<std::size_t>(first)], rMax));
@@ -89,7 +78,7 @@ clipPolylineAtRMax(std::vector<math::Vec2>& poly, double rMax)
   for (int i = first; i <= last; ++i) {
     out.push_back(poly[static_cast<std::size_t>(i)]);
   }
-  // Optional tail-interpolation if the polyline exits the domain.
+
   if (last + 1 < static_cast<int>(poly.size())) {
     out.push_back(interpR(
       poly[static_cast<std::size_t>(last)], poly[static_cast<std::size_t>(last + 1)], rMax));
@@ -98,7 +87,7 @@ clipPolylineAtRMax(std::vector<math::Vec2>& poly, double rMax)
   poly = std::move(out);
 }
 
-} // namespace
+}
 
 Result<FlowResults>
 FlowSolver::solve(const MeridionalGeometry& geom,
@@ -107,11 +96,6 @@ FlowSolver::solve(const MeridionalGeometry& geom,
 {
   auto checkCancel = [&]() -> bool { return isCancelled && isCancelled(); };
 
-  // 1. Resample hub/shroud to equal arc-length with nh points.
-  //    Extend each curve by a small margin past the outlet so the FEM
-  //    domain does not terminate exactly on r = d2/2, then clip the
-  //    derived results (streamlines, midline) back to r = d2/2 before
-  //    returning them for display.
   constexpr double OUTLET_EXTENSION_MM = 3.0;
   auto hubExtended = geom.hubCurve;
   auto shroudExtended = geom.shroudCurve;
@@ -131,7 +115,6 @@ FlowSolver::solve(const MeridionalGeometry& geom,
     return std::unexpected(CoreError::Cancelled);
   }
 
-  // 2. Build strip grid
   auto gridResult = buildStripGrid(hubResampled, shroudResampled, config_.m);
   if (!gridResult) {
     return std::unexpected(gridResult.error());
@@ -141,7 +124,6 @@ FlowSolver::solve(const MeridionalGeometry& geom,
     return std::unexpected(CoreError::Cancelled);
   }
 
-  // 3. Solve FEM
   auto femResult = solveFem(std::move(*gridResult));
   if (!femResult) {
     return std::unexpected(femResult.error());
@@ -151,7 +133,6 @@ FlowSolver::solve(const MeridionalGeometry& geom,
     return std::unexpected(CoreError::Cancelled);
   }
 
-  // 4. Extract streamlines and clip each at r <= d2/2.
   auto levels = equidistantLevels(config_.streamlineCount);
   auto streamlines = extractStreamlines(*femResult, levels);
   for (auto& line : streamlines) {
@@ -162,16 +143,11 @@ FlowSolver::solve(const MeridionalGeometry& geom,
     return std::unexpected(CoreError::Cancelled);
   }
 
-  // 5. Compute area profile. Use the ORIGINAL (non-extended) curves so
-  //    the hub/shroud polylines the area bisection sees end exactly at
-  //    r = d2/2.
   auto areaResult = computeAreaProfile(*femResult, geom.hubCurve, geom.shroudCurve, params);
   if (!areaResult) {
     return std::unexpected(areaResult.error());
   }
-  // Trim the midline/area arrays together so the chart's domain ends
-  // cleanly at r = d2/2. Find the first row that crosses the outlet,
-  // interpolate the last entry, then resize all parallel arrays to match.
+
   {
     auto& ap = *areaResult;
     std::size_t keep = ap.midPoints.size();
@@ -187,8 +163,7 @@ FlowSolver::solve(const MeridionalGeometry& geom,
       ap.flowAreas.clear();
       ap.arcLengths.clear();
     } else if (keep < ap.midPoints.size()) {
-      // Interpolate a terminal point exactly on r = rMax, copying the
-      // adjacent chord/area values (they vary slowly there).
+
       const auto& prev = ap.midPoints[keep - 1];
       const auto& next = ap.midPoints[keep];
       double denom = next.y() - prev.y();
@@ -202,7 +177,7 @@ FlowSolver::solve(const MeridionalGeometry& geom,
       ap.chordLengths.resize(keep + 1);
       ap.chordLengths[keep] = ap.chordLengths[keep - 1];
       ap.flowAreas.resize(keep + 1);
-      // Recompute the outlet area cleanly: 2*pi*r*chord with r=rMax.
+
       ap.flowAreas[keep] = 2.0 * std::numbers::pi * rMax * ap.chordLengths[keep];
       ap.arcLengths.resize(keep + 1);
       ap.arcLengths[keep] = ap.arcLengths[keep - 1] + (clipped - prev).norm();
@@ -232,4 +207,4 @@ FlowSolver::solve(const MeridionalGeometry& geom,
   };
 }
 
-} // namespace ggm::core
+}

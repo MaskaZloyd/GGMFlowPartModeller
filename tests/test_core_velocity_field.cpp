@@ -13,19 +13,13 @@ using Catch::Matchers::WithinAbs;
 
 TEST_CASE("Streamline Velocities - Annulus flow", "[core][velocity_field]")
 {
-  // Annulus parameters, SI units: meters and m^3/s.
+
   constexpr double rh = 1.0;
   constexpr double rs = 2.0;
   constexpr double length = 10.0;
   constexpr double flowRateM3s = 10.0;
   constexpr double lengthUnitToMeters = 1.0;
 
-  // Analytical velocity:
-  //
-  // psi(r) = (r^2 - rh^2) / (rs^2 - rh^2)
-  //
-  // v_z = Q / (pi * (rs^2 - rh^2))
-  // v_r = 0
   const double expectedVz = flowRateM3s / (std::numbers::pi * (rs * rs - rh * rh));
 
   constexpr int nh = 10;

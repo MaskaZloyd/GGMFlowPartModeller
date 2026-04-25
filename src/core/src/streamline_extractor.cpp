@@ -11,11 +11,6 @@ namespace ggm::core {
 
 namespace {
 
-// Chaikin's corner-cutting subdivision. One pass replaces each interior
-// segment (P_i, P_{i+1}) with (3/4 P_i + 1/4 P_{i+1}, 1/4 P_i + 3/4 P_{i+1}).
-// Endpoints are preserved so streamlines still start/end on the domain
-// boundary. Two iterations quadruples point count and smooths visible
-// staircase artefacts that marching squares leaves on the quad grid.
 void
 chaikinSmooth(std::vector<math::Vec2>& poly, int iterations)
 {
@@ -37,13 +32,6 @@ chaikinSmooth(std::vector<math::Vec2>& poly, int iterations)
   }
 }
 
-// Unique id for a grid edge. There are two edge kinds in a logical (nh x m)
-// grid:
-//   - i-edge: between node (i, j) and (i+1, j). Ranges i in [0, nh-2],
-//     j in [0, m-1].
-//   - j-edge: between node (i, j) and (i, j+1). Ranges i in [0, nh-1],
-//     j in [0, m-2].
-// We encode as a 64-bit integer so it hashes cheaply.
 constexpr std::uint64_t
 edgeIdI(int i, int j, int m) noexcept
 {
@@ -61,10 +49,6 @@ edgeIdJ(int i, int j, int m) noexcept
          1ULL;
 }
 
-// Interpolate the crossing point on a segment (pa, pb) where the scalar
-// field values are va, vb and we target level L. Returns pa + t*(pb-pa)
-// with t = (L - va)/(vb - va), clamped to [0, 1] to avoid NaN on equal
-// endpoints.
 math::Vec2
 interpolate(const math::Vec2& pa, const math::Vec2& pb, double va, double vb, double level) noexcept
 {
@@ -77,11 +61,6 @@ interpolate(const math::Vec2& pa, const math::Vec2& pb, double va, double vb, do
   return (1.0 - t) * pa + t * pb;
 }
 
-// Cell edge labels (marching squares):
-//   0 = bottom (c00 -> c10), identified as i-edge (i, j)
-//   1 = right  (c10 -> c11), identified as j-edge (i+1, j)
-//   2 = top    (c01 -> c11), identified as i-edge (i, j+1)
-//   3 = left   (c00 -> c01), identified as j-edge (i, j)
 enum : int
 {
   EdgeBottom = 0,
@@ -90,10 +69,6 @@ enum : int
   EdgeLeft = 3
 };
 
-// For each of the 16 marching-squares cases, record which edge pairs form
-// segments. Index 0..15 = bit(c00) + 2*bit(c10) + 4*bit(c11) + 8*bit(c01).
-// Each case emits 0, 1, or 2 segments. Ambiguous saddle cases (5, 10) emit
-// two segments using the "separate the two highs" convention.
 struct Segments
 {
   int count;
@@ -101,22 +76,22 @@ struct Segments
 };
 
 constexpr std::array<Segments, 16> SEGMENT_TABLE = {{
-  /* 0  0000 */ {0, {{{-1, -1}, {-1, -1}}}},
-  /* 1  0001 */ {1, {{{EdgeLeft, EdgeBottom}, {-1, -1}}}},
-  /* 2  0010 */ {1, {{{EdgeBottom, EdgeRight}, {-1, -1}}}},
-  /* 3  0011 */ {1, {{{EdgeLeft, EdgeRight}, {-1, -1}}}},
-  /* 4  0100 */ {1, {{{EdgeRight, EdgeTop}, {-1, -1}}}},
-  /* 5  0101 */ {2, {{{EdgeLeft, EdgeBottom}, {EdgeRight, EdgeTop}}}},
-  /* 6  0110 */ {1, {{{EdgeBottom, EdgeTop}, {-1, -1}}}},
-  /* 7  0111 */ {1, {{{EdgeLeft, EdgeTop}, {-1, -1}}}},
-  /* 8  1000 */ {1, {{{EdgeTop, EdgeLeft}, {-1, -1}}}},
-  /* 9  1001 */ {1, {{{EdgeTop, EdgeBottom}, {-1, -1}}}},
-  /* 10 1010 */ {2, {{{EdgeBottom, EdgeRight}, {EdgeTop, EdgeLeft}}}},
-  /* 11 1011 */ {1, {{{EdgeTop, EdgeRight}, {-1, -1}}}},
-  /* 12 1100 */ {1, {{{EdgeRight, EdgeLeft}, {-1, -1}}}},
-  /* 13 1101 */ {1, {{{EdgeBottom, EdgeRight}, {-1, -1}}}},
-  /* 14 1110 */ {1, {{{EdgeLeft, EdgeBottom}, {-1, -1}}}},
-  /* 15 1111 */ {0, {{{-1, -1}, {-1, -1}}}},
+  {0, {{{-1, -1}, {-1, -1}}}},
+  {1, {{{EdgeLeft, EdgeBottom}, {-1, -1}}}},
+  {1, {{{EdgeBottom, EdgeRight}, {-1, -1}}}},
+  {1, {{{EdgeLeft, EdgeRight}, {-1, -1}}}},
+  {1, {{{EdgeRight, EdgeTop}, {-1, -1}}}},
+  {2, {{{EdgeLeft, EdgeBottom}, {EdgeRight, EdgeTop}}}},
+  {1, {{{EdgeBottom, EdgeTop}, {-1, -1}}}},
+  {1, {{{EdgeLeft, EdgeTop}, {-1, -1}}}},
+  {1, {{{EdgeTop, EdgeLeft}, {-1, -1}}}},
+  {1, {{{EdgeTop, EdgeBottom}, {-1, -1}}}},
+  {2, {{{EdgeBottom, EdgeRight}, {EdgeTop, EdgeLeft}}}},
+  {1, {{{EdgeTop, EdgeRight}, {-1, -1}}}},
+  {1, {{{EdgeRight, EdgeLeft}, {-1, -1}}}},
+  {1, {{{EdgeBottom, EdgeRight}, {-1, -1}}}},
+  {1, {{{EdgeLeft, EdgeBottom}, {-1, -1}}}},
+  {0, {{{-1, -1}, {-1, -1}}}},
 }};
 
 struct EdgeKey
@@ -130,13 +105,11 @@ struct SegmentRecord
   std::uint64_t edgeB;
 };
 
-// Stitch a set of segments into polylines by walking the graph:
-// vertices = edge ids, edges = segments, degree <= 2 per vertex.
 std::vector<std::vector<math::Vec2>>
 stitch(const std::vector<SegmentRecord>& segments,
        const std::unordered_map<std::uint64_t, math::Vec2>& edgePoints)
 {
-  // adjacency: vertex -> list of (other vertex, segment index)
+
   std::unordered_map<std::uint64_t, std::vector<std::pair<std::uint64_t, std::size_t>>> adjacency;
   adjacency.reserve(segments.size() * 2);
   for (std::size_t s = 0; s < segments.size(); ++s) {
@@ -147,9 +120,6 @@ stitch(const std::vector<SegmentRecord>& segments,
   std::vector<bool> visited(segments.size(), false);
   std::vector<std::vector<math::Vec2>> polylines;
 
-  // Start polylines from open endpoints first (degree == 1) so the resulting
-  // polyline spans from one domain boundary to another. Closed loops are
-  // picked up in a second pass.
   auto extendFrom = [&](std::uint64_t start) -> std::vector<math::Vec2> {
     std::vector<math::Vec2> pts;
     auto it = edgePoints.find(start);
@@ -192,7 +162,6 @@ stitch(const std::vector<SegmentRecord>& segments,
     return pts;
   };
 
-  // Pass 1: start from open endpoints.
   for (const auto& [vertex, neighbors] : adjacency) {
     if (neighbors.size() == 1 && !visited[neighbors.front().second]) {
       auto poly = extendFrom(vertex);
@@ -202,7 +171,6 @@ stitch(const std::vector<SegmentRecord>& segments,
     }
   }
 
-  // Pass 2: closed loops — start anywhere with unvisited segments.
   for (std::size_t s = 0; s < segments.size(); ++s) {
     if (visited[s]) {
       continue;
@@ -256,7 +224,7 @@ stitch(const std::vector<SegmentRecord>& segments,
   return polylines;
 }
 
-} // namespace
+}
 
 std::vector<double>
 equidistantLevels(int count) noexcept
@@ -298,7 +266,6 @@ extractStreamlines(const FlowSolution& sol, const std::vector<double>& psiLevels
     segments.reserve(static_cast<std::size_t>((nh - 1) * (mm - 1)));
 
     auto getEdgeCrossing = [&](int edgeLabel, int i, int j) -> std::uint64_t {
-      // i, j are the cell base indices (i in [0, nh-2], j in [0, mm-2]).
       std::uint64_t id = 0;
       int ia = 0;
       int ja = 0;
@@ -377,8 +344,8 @@ extractStreamlines(const FlowSolution& sol, const std::vector<double>& psiLevels
           return a.size() < b.size();
         });
       line.points = std::move(*longest);
-      // Smooth away the quad-cell staircase left by marching squares.
-      chaikinSmooth(line.points, /*iterations=*/2);
+
+      chaikinSmooth(line.points, 2);
     }
     streamlines.push_back(std::move(line));
   }
@@ -386,4 +353,4 @@ extractStreamlines(const FlowSolution& sol, const std::vector<double>& psiLevels
   return streamlines;
 }
 
-} // namespace ggm::core
+}

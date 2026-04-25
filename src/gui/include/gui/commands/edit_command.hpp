@@ -6,8 +6,8 @@
 
 namespace ggm::gui {
 
-// A snapshot-based undoable edit.
-// Stores complete before/after PumpParams (112 bytes each — cheap to copy).
+/// A snapshot-based undoable edit.
+/// Stores complete before/after PumpParams (112 bytes each — cheap to copy).
 struct EditCommand
 {
   core::PumpParams before;
@@ -15,4 +15,4 @@ struct EditCommand
   std::string label;
 };
 
-} // namespace ggm::gui
+}

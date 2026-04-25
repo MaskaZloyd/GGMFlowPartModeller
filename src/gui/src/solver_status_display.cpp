@@ -38,4 +38,4 @@ solverStatusPanel(core::SolverStatus status) noexcept
   return {{1.0F, 1.0F, 1.0F, 1.0F}, "?"};
 }
 
-} // namespace ggm::gui
+}

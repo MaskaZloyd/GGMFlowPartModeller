@@ -24,10 +24,6 @@ constexpr float CHART_WINDOW_BASE_Y = 54.0F;
 constexpr float CHART_WINDOW_CASCADE_X = 24.0F;
 constexpr float CHART_WINDOW_CASCADE_Y = 28.0F;
 
-// For each midline row, take ψ at the grid node closest to that row's
-// geometric midpoint. Produces the ψ value along the mean streamline —
-// useful to verify that the FEM solution actually reaches 0.5 somewhere
-// in the middle of the channel.
 std::vector<double>
 psiAlongMidline(const core::FlowResults& flow)
 {
@@ -216,7 +212,7 @@ drawMidlinePsiChart(const core::FlowResults& flow) noexcept
   ImPlot::EndPlot();
 }
 
-} // namespace
+}
 
 void
 drawChartsPanel(const core::FlowResults* flow, bool flowValid, ImGuiID dockspaceId) noexcept
@@ -253,4 +249,4 @@ drawChartsPanel(const core::FlowResults* flow, bool flowValid, ImGuiID dockspace
   ImGui::End();
 }
 
-} // namespace ggm::gui
+}

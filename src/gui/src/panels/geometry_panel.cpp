@@ -22,7 +22,6 @@ namespace ggm::gui {
 
 namespace {
 
-// Pick a round scale-bar length that occupies ~15% of the viewport width.
 double
 niceScaleLength(double pxPerMm, float widthPx) noexcept
 {
@@ -41,7 +40,6 @@ niceScaleLength(double pxPerMm, float widthPx) noexcept
   return step * mag;
 }
 
-// Map a world-space (z, r) point to pixel coordinates inside the image.
 ImVec2
 worldToPixel(double z, double r, ImVec2 imgMin, ImVec2 imgMax, const ViewportMap& vp) noexcept
 {
@@ -50,7 +48,7 @@ worldToPixel(double z, double r, ImVec2 imgMin, ImVec2 imgMax, const ViewportMap
   const float imgW = imgMax.x - imgMin.x;
   const float imgH = imgMax.y - imgMin.y;
   const float px = imgMin.x + static_cast<float>((z - vp.minZ) / rangeZ) * imgW;
-  // World r is "up"; image y grows down — flip.
+
   const float py = imgMax.y - static_cast<float>((r - vp.minR) / rangeR) * imgH;
   return ImVec2(px, py);
 }
@@ -64,11 +62,9 @@ pixelToWorld(ImVec2 pixel, ImVec2 imgMin, ImVec2 imgMax, const ViewportMap& vp) 
   const float imgH = imgMax.y - imgMin.y;
   const double z = vp.minZ + ((pixel.x - imgMin.x) / imgW) * rangeZ;
   const double r = vp.minR + ((imgMax.y - pixel.y) / imgH) * rangeR;
-  return { z, r };
+  return {z, r};
 }
 
-// Stats overlay placed at a caller-supplied anchor (so it can sit under
-// the legend on the left). Width is sized for the longest line.
 void
 drawStatsOverlay(ImDrawList* dl, ImVec2 topLeft, const core::FlowResults* flow)
 {
@@ -114,7 +110,6 @@ drawStatsOverlay(ImDrawList* dl, ImVec2 topLeft, const core::FlowResults* flow)
   std::snprintf(
     lines[4], sizeof(lines[4]), "F_out / F_in = %.3f", ap.f1 > 0.0 ? ap.f2 / ap.f1 : 0.0);
 
-  // Size box to fit the widest rendered line, with a small side padding.
   float maxTextW = ImGui::CalcTextSize("Метрики потока").x;
   for (const auto& line : lines) {
     maxTextW = std::max(maxTextW, ImGui::CalcTextSize(line).x);
@@ -123,23 +118,21 @@ drawStatsOverlay(ImDrawList* dl, ImVec2 topLeft, const core::FlowResults* flow)
   const float padY = 6.0F;
   const float rowH = ImGui::GetTextLineHeightWithSpacing();
   const float width = maxTextW + (padX * 2.0F);
-  const float height = (rowH * 6.0F) + padY; // title row + 5 data rows
+  const float height = (rowH * 6.0F) + padY;
 
-  const ImVec2 bottomRight{ topLeft.x + width, topLeft.y + height };
+  const ImVec2 bottomRight{topLeft.x + width, topLeft.y + height};
   dl->AddRectFilled(topLeft, bottomRight, BG, 5.0F);
   dl->AddRect(topLeft, bottomRight, BORDER, 5.0F);
 
   dl->AddText(ImVec2(topLeft.x + padX, topLeft.y + (padY * 0.5F)), DIM, "Метрики потока");
   for (int i = 0; i < 5; ++i) {
-    dl->AddText(ImVec2(topLeft.x + padX,
-                       topLeft.y + (padY * 0.5F) + static_cast<float>(i + 1) * rowH),
-                TEXT,
-                lines[i]);
+    dl->AddText(
+      ImVec2(topLeft.x + padX, topLeft.y + (padY * 0.5F) + static_cast<float>(i + 1) * rowH),
+      TEXT,
+      lines[i]);
   }
 }
 
-// Draws a dashed line between two pixel points. ImDrawList has no native
-// dash support, so we step along the segment and emit short strokes.
 void
 drawDashedLine(ImDrawList* dl,
                ImVec2 start,
@@ -167,8 +160,6 @@ drawDashedLine(ImDrawList* dl,
   }
 }
 
-// Dashed black lines connecting hub↔shroud at inlet and at outlet. Marks
-// the entry and exit cross-sections on top of the flow visualization.
 void
 drawPortLines(ImDrawList* dl,
               ImVec2 imgMin,
@@ -179,22 +170,20 @@ drawPortLines(ImDrawList* dl,
   constexpr ImU32 DASH_COLOR = IM_COL32(30, 30, 45, 220);
 
   if (!geom.hubCurve.empty() && !geom.shroudCurve.empty()) {
-    const ImVec2 hubIn = worldToPixel(
-      geom.hubCurve.front().x(), geom.hubCurve.front().y(), imgMin, imgMax, vp);
-    const ImVec2 shrIn = worldToPixel(
-      geom.shroudCurve.front().x(), geom.shroudCurve.front().y(), imgMin, imgMax, vp);
+    const ImVec2 hubIn =
+      worldToPixel(geom.hubCurve.front().x(), geom.hubCurve.front().y(), imgMin, imgMax, vp);
+    const ImVec2 shrIn =
+      worldToPixel(geom.shroudCurve.front().x(), geom.shroudCurve.front().y(), imgMin, imgMax, vp);
     drawDashedLine(dl, hubIn, shrIn, DASH_COLOR);
 
-    const ImVec2 hubOut = worldToPixel(
-      geom.hubCurve.back().x(), geom.hubCurve.back().y(), imgMin, imgMax, vp);
-    const ImVec2 shrOut = worldToPixel(
-      geom.shroudCurve.back().x(), geom.shroudCurve.back().y(), imgMin, imgMax, vp);
+    const ImVec2 hubOut =
+      worldToPixel(geom.hubCurve.back().x(), geom.hubCurve.back().y(), imgMin, imgMax, vp);
+    const ImVec2 shrOut =
+      worldToPixel(geom.shroudCurve.back().x(), geom.shroudCurve.back().y(), imgMin, imgMax, vp);
     drawDashedLine(dl, hubOut, shrOut, DASH_COLOR);
   }
 }
 
-// Colored circles at inlet (hub[0], shroud[0]), outlet (hub.back, shroud.back)
-// and throat (the midline station with minimum flow area).
 void
 drawCriticalMarkers(ImDrawList* dl,
                     ImVec2 imgMin,
@@ -203,8 +192,7 @@ drawCriticalMarkers(ImDrawList* dl,
                     const core::FlowResults* flow,
                     const ViewportMap& vp)
 {
-  // Place label relative to the circle: "above" drops it above the point,
-  // "below" puts it below, "side" places to the right.
+
   enum class LabelSide
   {
     Above,
@@ -212,48 +200,42 @@ drawCriticalMarkers(ImDrawList* dl,
     Side,
   };
 
-  const auto marker =
-    [&](const math::Vec2& world, ImU32 fill, const char* label, LabelSide side) {
-      const ImVec2 px = worldToPixel(world.x(), world.y(), imgMin, imgMax, vp);
-      dl->AddCircleFilled(px, 5.0F, fill);
-      dl->AddCircle(px, 5.0F, IM_COL32(20, 20, 20, 255), 0, 1.2F);
+  const auto marker = [&](const math::Vec2& world, ImU32 fill, const char* label, LabelSide side) {
+    const ImVec2 px = worldToPixel(world.x(), world.y(), imgMin, imgMax, vp);
+    dl->AddCircleFilled(px, 5.0F, fill);
+    dl->AddCircle(px, 5.0F, IM_COL32(20, 20, 20, 255), 0, 1.2F);
 
-      const ImVec2 textSize = ImGui::CalcTextSize(label);
-      constexpr float GAP = 8.0F;
-      ImVec2 textPos;
-      switch (side) {
-        case LabelSide::Above:
-          textPos = ImVec2(px.x - (textSize.x * 0.5F), px.y - GAP - textSize.y);
-          break;
-        case LabelSide::Below:
-          textPos = ImVec2(px.x - (textSize.x * 0.5F), px.y + GAP);
-          break;
-        case LabelSide::Side:
-        default:
-          textPos = ImVec2(px.x + GAP, px.y - (textSize.y * 0.5F));
-          break;
-      }
-      dl->AddText(textPos, IM_COL32(20, 20, 30, 255), label);
-    };
+    const ImVec2 textSize = ImGui::CalcTextSize(label);
+    constexpr float GAP = 8.0F;
+    ImVec2 textPos;
+    switch (side) {
+      case LabelSide::Above:
+        textPos = ImVec2(px.x - (textSize.x * 0.5F), px.y - GAP - textSize.y);
+        break;
+      case LabelSide::Below:
+        textPos = ImVec2(px.x - (textSize.x * 0.5F), px.y + GAP);
+        break;
+      case LabelSide::Side:
+      default:
+        textPos = ImVec2(px.x + GAP, px.y - (textSize.y * 0.5F));
+        break;
+    }
+    dl->AddText(textPos, IM_COL32(20, 20, 30, 255), label);
+  };
 
-  // Hub — inlet sits low-left (label below); outlet meets D₂ in the upper-
-  // right corner where "below" would go off-screen, so label above there.
   if (!geom.hubCurve.empty()) {
     marker(geom.hubCurve.front(), IM_COL32(70, 200, 70, 230), "вход hub", LabelSide::Below);
     marker(geom.hubCurve.back(), IM_COL32(220, 60, 60, 230), "выход hub", LabelSide::Above);
   }
-  // Shroud — labels above (shroud is the upper curve).
+
   if (!geom.shroudCurve.empty()) {
-    marker(
-      geom.shroudCurve.front(), IM_COL32(70, 200, 70, 230), "вход shroud", LabelSide::Above);
+    marker(geom.shroudCurve.front(), IM_COL32(70, 200, 70, 230), "вход shroud", LabelSide::Above);
     marker(geom.shroudCurve.back(), IM_COL32(220, 60, 60, 230), "выход shroud", LabelSide::Above);
   }
 
   (void)flow;
 }
 
-// Shows a tooltip with local (z, r, nearest ψ, |V|) when the user hovers
-// over the geometry image.
 void
 drawHoverInspector(ImVec2 imgMin,
                    ImVec2 imgMax,
@@ -272,7 +254,6 @@ drawHoverInspector(ImVec2 imgMin,
 
   const math::Vec2 world = pixelToWorld(mousePx, imgMin, imgMax, vp);
 
-  // Find nearest streamline sample (z, r space).
   const core::VelocitySample* best = nullptr;
   double bestPsi = 0.0;
   double bestSq = std::numeric_limits<double>::max();
@@ -305,8 +286,6 @@ drawHoverInspector(ImVec2 imgMin,
   ImGui::EndTooltip();
 }
 
-// Ghost overlay of a snapshot geometry via ImDrawList — same viewport as
-// the main render so curves align. Drawn with muted violet, semi-transp.
 void
 drawSnapshotOverlay(ImDrawList* dl,
                     ImVec2 imgMin,
@@ -333,9 +312,6 @@ drawSnapshotOverlay(ImDrawList* dl,
   drawCurve(snapshot.shroudCurve, SHROUD_COLOR);
 }
 
-// Exports the currently bound FBO contents to a .ppm file. PPM is a trivial
-// header + raw RGB bytes — zero dependencies, quick to implement, and every
-// modern viewer/converter reads it.
 bool
 exportFboToPpm(const Fbo& fbo, const std::string& path)
 {
@@ -347,9 +323,6 @@ exportFboToPpm(const Fbo& fbo, const std::string& path)
   std::vector<unsigned char> pixels(static_cast<std::size_t>(width) *
                                     static_cast<std::size_t>(height) * 3U);
 
-  // Read pixels back from the resolve color texture. After unbind() it
-  // already contains the resolved frame; glGetTexImage avoids us needing
-  // to know the internal FBO id.
   glBindTexture(GL_TEXTURE_2D, fbo.textureId());
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
   glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
@@ -360,7 +333,7 @@ exportFboToPpm(const Fbo& fbo, const std::string& path)
     return false;
   }
   out << "P6\n" << width << ' ' << height << "\n255\n";
-  // FBO pixels come out bottom-up; flip rows for standard top-down layout.
+
   const std::size_t stride = static_cast<std::size_t>(width) * 3U;
   for (int y = height - 1; y >= 0; --y) {
     const auto* row = pixels.data() + (static_cast<std::size_t>(y) * stride);
@@ -369,8 +342,6 @@ exportFboToPpm(const Fbo& fbo, const std::string& path)
   return static_cast<bool>(out);
 }
 
-// Renders the legend and returns its on-screen height so callers can stack
-// further overlays (e.g. stats) directly beneath it.
 float
 drawLegend(ImDrawList* dl, ImVec2 topLeft)
 {
@@ -437,7 +408,7 @@ drawScaleBar(ImDrawList* dl, ImVec2 imgMin, ImVec2 imgMax, const ViewportMap& vp
   (void)imgH;
 }
 
-} // namespace
+}
 
 namespace {
 
@@ -494,7 +465,7 @@ drawActionBar(GeometryPanelState& state,
   }
 }
 
-} // namespace
+}
 
 void
 drawGeometryPanelWithTitle(const char* windowTitle,
@@ -544,13 +515,12 @@ drawGeometryPanelWithTitle(const char* windowTitle,
 
   if (geometryValid) {
     auto* dl = ImGui::GetWindowDrawList();
-    const ImVec2 legendPos{ imgMin.x + 12.0F, imgMin.y + 12.0F };
+    const ImVec2 legendPos{imgMin.x + 12.0F, imgMin.y + 12.0F};
     const float legendH = drawLegend(dl, legendPos);
     drawScaleBar(dl, imgMin, imgMax, vp);
-    // Stats box stacked directly under the legend, 8 px gap.
+
     drawStatsOverlay(dl, ImVec2(legendPos.x, legendPos.y + legendH + 8.0F), flow);
-    // Inlet/outlet cross-section lines (dashed) — under the circle markers
-    // so the markers remain visually on top.
+
     drawPortLines(dl, imgMin, imgMax, geom, vp);
     if (renderSettings.showCriticalMarkers) {
       drawCriticalMarkers(dl, imgMin, imgMax, geom, flow, vp);
@@ -580,4 +550,4 @@ drawGeometryPanel(Fbo& fbo,
     "Геометрия", fbo, renderer, state, geom, flow, renderSettings, geometryValid, dockspaceId);
 }
 
-} // namespace ggm::gui
+}

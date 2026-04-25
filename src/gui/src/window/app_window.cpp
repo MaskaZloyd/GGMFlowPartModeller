@@ -44,7 +44,7 @@ AppWindow::create(WindowConfig cfg) noexcept
     glfwTerminate();
     return std::unexpected(std::move(error));
   }
-  // GLEW may leave a benign GL_INVALID_ENUM while probing a core profile.
+
   (void)glGetError();
 
   IMGUI_CHECKVERSION();
@@ -55,9 +55,7 @@ AppWindow::create(WindowConfig cfg) noexcept
   imguiIo.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   imguiIo.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
-  // Load a font with Cyrillic glyphs. Try common system paths.
   constexpr const char* FONT_CANDIDATES[] = {
-    // NOLINT
     "C:/Windows/Fonts/segoeui.ttf",
     "C:/Windows/Fonts/arial.ttf",
     "C:/Windows/Fonts/tahoma.ttf",
@@ -174,4 +172,4 @@ AppWindow::destroy() noexcept
   }
 }
 
-} // namespace ggm::gui
+}

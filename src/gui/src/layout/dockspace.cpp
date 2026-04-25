@@ -130,14 +130,13 @@ buildReverseDesignLayout(ImGuiID dockspaceId, ImVec2 size) noexcept
   ImGui::DockBuilderFinish(dockspaceId);
 }
 
-} // namespace
+}
 
 DockspaceLayout
 buildDockspace(bool canUndo, bool canRedo) noexcept
 {
   DockspaceLayout layout;
 
-  // Fullscreen dockspace window
   const ImGuiViewport* viewport = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(viewport->Pos);
   ImGui::SetNextWindowSize(viewport->Size);
@@ -161,7 +160,6 @@ buildDockspace(bool canUndo, bool canRedo) noexcept
     dockspaceId, ImVec2(0.0F, 0.0F), ImGuiDockNodeFlags_PassthruCentralNode, &rootWindowClass);
   buildRootModulesLayout(dockspaceId);
 
-  // Main menu bar
   if (ImGui::BeginMenuBar()) {
     if (ImGui::BeginMenu("File")) {
       if (ImGui::MenuItem("New", "Ctrl+N")) {
@@ -199,7 +197,6 @@ buildDockspace(bool canUndo, bool canRedo) noexcept
 
   ImGui::End();
 
-  // Keyboard shortcuts
   auto& imguiIo = ImGui::GetIO();
   bool ctrl = imguiIo.KeyCtrl;
   if (ctrl && ImGui::IsKeyPressed(ImGuiKey_Z) && canUndo) {
@@ -258,7 +255,6 @@ drawStatusBar(std::string_view fileName,
   ImGui::Begin("##StatusBar", nullptr, flags);
   ImGui::PopStyleVar(3);
 
-  // File: filename or placeholder.
   ImGui::TextDisabled("Файл:");
   ImGui::SameLine();
   if (fileName.empty()) {
@@ -280,7 +276,6 @@ drawStatusBar(std::string_view fileName,
     ImGui::TextDisabled("(%lld мс)", static_cast<long long>(lastDuration.count()));
   }
 
-  // FPS on the right.
   float fps = ImGui::GetIO().Framerate;
   char fpsBuf[32];
   std::snprintf(fpsBuf, sizeof(fpsBuf), "FPS: %.0f", static_cast<double>(fps));
@@ -291,4 +286,4 @@ drawStatusBar(std::string_view fileName,
   ImGui::End();
 }
 
-} // namespace ggm::gui
+}

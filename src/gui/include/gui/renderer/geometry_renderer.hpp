@@ -8,9 +8,9 @@
 
 namespace ggm::gui {
 
-// Visible world bounds after the aspect correction. Panels use this to draw
-// overlays (legend, scale bar) whose position depends on the pixel-to-world
-// mapping.
+/// Visible world bounds after the aspect correction. Panels use this to draw
+/// overlays (legend, scale bar) whose position depends on the pixel-to-world
+/// mapping.
 struct ViewportMap
 {
   double minZ = 0.0;
@@ -21,8 +21,8 @@ struct ViewportMap
   int heightPx = 0;
 };
 
-// Renders hub/shroud polylines, grid, streamlines, and mean line
-// into the currently bound FBO using OpenGL.
+/// Renders hub/shroud polylines, grid, streamlines, and mean line
+/// into the currently bound FBO using OpenGL.
 class GeometryRenderer
 {
 public:
@@ -55,4 +55,4 @@ private:
   std::vector<float> scratchVertices_;
 };
 
-} // namespace ggm::gui
+}

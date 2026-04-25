@@ -7,7 +7,7 @@ namespace ggm::gui {
 void
 UndoStack::push(EditCommand cmd)
 {
-  // Truncate any redo history above cursor
+
   while (static_cast<int>(stack_.size()) > cursor_ + 1) {
     stack_.pop_back();
   }
@@ -15,7 +15,6 @@ UndoStack::push(EditCommand cmd)
   stack_.push_back(std::move(cmd));
   ++cursor_;
 
-  // Trim oldest if over limit
   while (static_cast<int>(stack_.size()) > MAX_DEPTH) {
     stack_.pop_front();
     --cursor_;
@@ -81,4 +80,4 @@ UndoStack::redo() noexcept
   }
 }
 
-} // namespace ggm::gui
+}

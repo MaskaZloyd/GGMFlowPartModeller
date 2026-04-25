@@ -148,4 +148,4 @@ AsyncGeometryOptimizer::cancelAndWait() noexcept
   }
 }
 
-} // namespace ggm::core
+}

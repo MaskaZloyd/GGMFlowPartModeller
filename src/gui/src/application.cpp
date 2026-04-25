@@ -83,8 +83,6 @@ Application::run() noexcept
       break;
     }
 
-    // Take a single snapshot for this frame — keeps result alive even if
-    // the worker publishes a new one mid-frame.
     auto flowSnapshot = asyncSolver_->snapshot();
     const core::FlowResults* flowPtr = flowSnapshot.get();
     bool flowValid = flowSnapshot != nullptr;
@@ -278,4 +276,4 @@ Application::applyReverseDesignParams(const core::PumpParams& params) noexcept
   logging::gui()->info("Геометрия импортирована из обратного проектирования");
 }
 
-} // namespace ggm::gui
+}

@@ -13,10 +13,9 @@ rgba(float r, float g, float b, float a = 1.0F)
   return {r, g, b, a};
 }
 
-// Palette — light canvas with a soft indigo accent.
-constexpr ImVec4 BG_BASE = rgba(0.975F, 0.977F, 0.980F);   // main background
-constexpr ImVec4 BG_PANEL = rgba(0.945F, 0.950F, 0.958F);  // child/group bg
-constexpr ImVec4 BG_HEADER = rgba(0.895F, 0.910F, 0.935F); // section headers
+constexpr ImVec4 BG_BASE = rgba(0.975F, 0.977F, 0.980F);
+constexpr ImVec4 BG_PANEL = rgba(0.945F, 0.950F, 0.958F);
+constexpr ImVec4 BG_HEADER = rgba(0.895F, 0.910F, 0.935F);
 constexpr ImVec4 BG_HOVER = rgba(0.880F, 0.905F, 0.940F);
 constexpr ImVec4 BG_ACTIVE = rgba(0.780F, 0.850F, 0.955F);
 constexpr ImVec4 ACCENT = rgba(0.320F, 0.470F, 0.870F);
@@ -25,7 +24,7 @@ constexpr ImVec4 BORDER = rgba(0.820F, 0.830F, 0.845F);
 constexpr ImVec4 TEXT = rgba(0.145F, 0.150F, 0.180F);
 constexpr ImVec4 TEXT_MUTED = rgba(0.480F, 0.490F, 0.520F);
 
-} // namespace
+}
 
 void
 applyLightTheme()
@@ -33,7 +32,6 @@ applyLightTheme()
   ImGui::StyleColorsLight();
   auto& style = ImGui::GetStyle();
 
-  // Spacing / shape: airy, rounded, predictable.
   style.WindowRounding = 6.0F;
   style.ChildRounding = 6.0F;
   style.FrameRounding = 4.0F;
@@ -98,7 +96,6 @@ applyLightTheme()
   c[ImGuiCol_PlotHistogram] = ACCENT;
   c[ImGuiCol_NavHighlight] = ACCENT;
 
-  // ImPlot light variant.
   ImPlot::StyleColorsLight();
   auto& ps = ImPlot::GetStyle();
   ps.LineWeight = 1.5F;
@@ -129,4 +126,4 @@ applyLightTheme()
   ps.Colors[ImPlotCol_TitleText] = TEXT;
 }
 
-} // namespace ggm::gui
+}

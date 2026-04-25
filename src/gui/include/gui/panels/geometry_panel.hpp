@@ -10,17 +10,17 @@
 
 namespace ggm::core {
 struct FlowResults;
-} // namespace ggm::core
+}
 
 namespace ggm::gui {
 
-// Per-panel state: snapshot slot for before/after comparisons and a
-// transient message shown after e.g. a PNG/PPM export.
+/// Per-panel state: snapshot slot for before/after comparisons and a
+/// transient message shown after e.g. a PNG/PPM export.
 struct GeometryPanelState
 {
   std::optional<core::MeridionalGeometry> snapshot;
   std::string exportMessage;
-  double exportMessageExpiresAt = 0.0; // ImGui::GetTime() value; 0 = hidden
+  double exportMessageExpiresAt = 0.0; ///< ImGui::GetTime() value; 0 = hidden
 };
 
 void
@@ -34,7 +34,7 @@ drawGeometryPanelWithTitle(const char* windowTitle,
                            bool geometryValid,
                            unsigned int dockspaceId) noexcept;
 
-// Draw the 2D geometry viewport panel using FBO rendering.
+/// Draw the 2D geometry viewport panel using FBO rendering.
 void
 drawGeometryPanel(Fbo& fbo,
                   GeometryRenderer& renderer,
@@ -45,4 +45,4 @@ drawGeometryPanel(Fbo& fbo,
                   bool geometryValid,
                   unsigned int dockspaceId) noexcept;
 
-} // namespace ggm::gui
+}

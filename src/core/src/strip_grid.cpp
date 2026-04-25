@@ -7,11 +7,6 @@ namespace ggm::core {
 
 namespace {
 
-// Run a few sweeps of Laplace smoothing on interior grid nodes: each node
-// is pulled toward the average of its four neighbours. Hub/shroud walls
-// and inlet/outlet rows stay pinned so boundary conditions remain valid.
-// This gives the strip grid a more orthogonal look through curved sections
-// without changing its topology.
 void
 smoothInterior(std::vector<math::Vec2>& nodes, int nh, int mm, int iterations, double relax)
 {
@@ -43,7 +38,7 @@ smoothInterior(std::vector<math::Vec2>& nodes, int nh, int mm, int iterations, d
   nodes = std::move(bufs[static_cast<std::size_t>(src)]);
 }
 
-} // namespace
+}
 
 Result<StripGrid>
 buildStripGrid(std::span<const math::Vec2> hub, std::span<const math::Vec2> shroud, int m) noexcept
@@ -57,7 +52,6 @@ buildStripGrid(std::span<const math::Vec2> hub, std::span<const math::Vec2> shro
   grid.nh = nh;
   grid.m = m;
 
-  // Build nodes: linear interpolation between hub[i] and shroud[i]
   int totalNodes = nh * m;
   grid.nodes.resize(static_cast<std::size_t>(totalNodes));
   grid.hubNodes.reserve(static_cast<std::size_t>(nh));
@@ -73,10 +67,8 @@ buildStripGrid(std::span<const math::Vec2> hub, std::span<const math::Vec2> shro
     grid.shroudNodes.push_back(i * m + (m - 1));
   }
 
-  // Smooth interior nodes (Laplace, 20 sweeps at 0.5 relaxation).
-  smoothInterior(grid.nodes, nh, m, /*iterations=*/20, /*relax=*/0.5);
+  smoothInterior(grid.nodes, nh, m, 20, 0.5);
 
-  // Build triangles: 2 per quad cell
   int numQuads = (nh - 1) * (m - 1);
   grid.triangles.reserve(static_cast<std::size_t>(numQuads * 2));
 
@@ -94,4 +86,4 @@ buildStripGrid(std::span<const math::Vec2> hub, std::span<const math::Vec2> shro
   return grid;
 }
 
-} // namespace ggm::core
+}

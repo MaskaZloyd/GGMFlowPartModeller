@@ -53,7 +53,7 @@ fromJson(const nlohmann::json& json)
   return params;
 }
 
-} // namespace
+}
 
 Result<void>
 saveParams(const PumpParams& params, const std::filesystem::path& path) noexcept
@@ -101,4 +101,4 @@ loadParams(const std::filesystem::path& path) noexcept
   }
 }
 
-} // namespace ggm::core
+}

@@ -14,7 +14,7 @@ tmpPath()
 {
   return std::filesystem::temp_directory_path() / "ggm_test_params.ggm";
 }
-} // namespace
+}
 
 TEST_CASE("saveParams / loadParams: round-trip preserves all fields", "[serialization]")
 {

@@ -24,9 +24,6 @@ struct TriLocal
   bool degenerate;
 };
 
-// Compute local stiffness and first-order matrices for a P1 triangle element.
-// Nodes: (z0,r0), (z1,r1), (z2,r2).
-// PDE: div(grad(psi)) - (1/r)*dpsi_dr = 0
 TriLocal
 computeElementMatrices(const math::Vec2& p0, const math::Vec2& p1, const math::Vec2& p2) noexcept
 {
@@ -36,7 +33,6 @@ computeElementMatrices(const math::Vec2& p0, const math::Vec2& p1, const math::V
   result.area = 0.0;
   result.degenerate = false;
 
-  // z = x(), r = y()
   const double z0 = p0.x();
   const double r0 = p0.y();
   const double z1 = p1.x();
@@ -72,8 +68,6 @@ computeElementMatrices(const math::Vec2& p0, const math::Vec2& p1, const math::V
 
   const double invR = 1.0 / rElem;
 
-  // Conservative weak form:
-  // ∫ (1/r) grad(phi_i) · grad(phi_j) dΩ
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
       result.stiffness(i, j) =
@@ -85,7 +79,7 @@ computeElementMatrices(const math::Vec2& p0, const math::Vec2& p1, const math::V
   return result;
 }
 
-} // namespace
+}
 
 Result<FlowSolution>
 solveFem(StripGrid grid) noexcept
@@ -97,7 +91,6 @@ solveFem(StripGrid grid) noexcept
     return std::unexpected(CoreError::SolverFailed);
   }
 
-  // TBB parallel assembly: per-thread triplet lists
   using TripletList = std::vector<Eigen::Triplet<double>>;
   tbb::enumerable_thread_specific<TripletList> threadTriplets;
 
@@ -108,7 +101,6 @@ solveFem(StripGrid grid) noexcept
     const auto& p1 = grid.nodes[static_cast<std::size_t>(tri[1])];
     const auto& p2 = grid.nodes[static_cast<std::size_t>(tri[2])];
 
-    // Force CCW orientation: if detJ < 0, swap vertices 1 and 2
     double detJ = (p1.x() - p0.x()) * (p2.y() - p0.y()) - (p2.x() - p0.x()) * (p1.y() - p0.y());
     TriLocal local;
     if (detJ < 0.0) {
@@ -135,7 +127,6 @@ solveFem(StripGrid grid) noexcept
     }
   });
 
-  // Merge all per-thread triplets
   TripletList allTriplets;
   std::size_t totalSize = 0;
   for (const auto& tl : threadTriplets) {
@@ -146,16 +137,12 @@ solveFem(StripGrid grid) noexcept
     allTriplets.insert(allTriplets.end(), tl.begin(), tl.end());
   }
 
-  // Build sparse matrix (ROW-major so that InnerIterator walks rows — the
-  // Dirichlet row-replacement below depends on this).
   using SparseRowMajor = Eigen::SparseMatrix<double, Eigen::RowMajor>;
   SparseRowMajor matA(totalNodes, totalNodes);
   matA.setFromTriplets(allTriplets.begin(), allTriplets.end());
 
   Eigen::VectorXd rhs = Eigen::VectorXd::Zero(totalNodes);
 
-  // Apply Dirichlet BCs: psi=0 on hub, psi=1 on shroud. Row-replacement:
-  // zero the row, set diagonal to 1, set rhs to the boundary value.
   auto applyDirichlet = [&](int node, double value) {
     for (SparseRowMajor::InnerIterator it(matA, node); it; ++it) {
       it.valueRef() = 0.0;
@@ -173,7 +160,6 @@ solveFem(StripGrid grid) noexcept
 
   matA.makeCompressed();
 
-  // Solve — SparseLU needs a col-major operand, so convert once.
   Eigen::SparseMatrix<double> matACol = matA;
   Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
   solver.compute(matACol);
@@ -186,11 +172,10 @@ solveFem(StripGrid grid) noexcept
     return std::unexpected(CoreError::SolverFailed);
   }
 
-  // Copy to std::vector
   std::vector<double> psi(static_cast<std::size_t>(totalNodes));
   Eigen::Map<Eigen::VectorXd>(psi.data(), totalNodes) = psiVec;
 
   return FlowSolution{.grid = std::move(grid), .psi = std::move(psi)};
 }
 
-} // namespace ggm::core
+}

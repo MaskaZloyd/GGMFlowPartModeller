@@ -41,8 +41,6 @@ buildFromSegments(std::span<const ArcBezier> segments) noexcept
 
 namespace {
 
-// Binary-search for the knot span such that knots[k] <= param < knots[k+1].
-// numCps = controlPoints.size() - 1, deg = curve degree. Span index in [deg, numCps].
 [[nodiscard]] std::size_t
 findSpan(std::size_t numCps,
          std::size_t deg,
@@ -69,10 +67,6 @@ findSpan(std::size_t numCps,
   return mid;
 }
 
-// Compute the (deg+1) non-zero basis functions N[span-deg..span] at param
-// using the triangular recurrence from The NURBS Book section 2.5
-// (Piegl and Tiller, algorithm A2.2).
-// Only for deg = 2 in this codebase — the fixed-size arrays reflect that.
 void
 basisFunctions(std::size_t span,
                double param,
@@ -97,7 +91,7 @@ basisFunctions(std::size_t span,
   }
 }
 
-} // namespace
+}
 
 std::vector<Vec2>
 evaluate(const NurbsCurve& curve, int numPoints) noexcept
@@ -142,4 +136,4 @@ evaluate(const NurbsCurve& curve, int numPoints) noexcept
   return result;
 }
 
-} // namespace ggm::math
+}

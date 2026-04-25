@@ -17,9 +17,9 @@ struct MeridionalGeometry
   math::NurbsCurve shroudNurbs;
 };
 
-// Build meridional geometry from pump parameters.
-// Returns evaluated hub and shroud curves + their NURBS representations.
+/// Build meridional geometry from pump parameters.
+/// Returns evaluated hub and shroud curves + their NURBS representations.
 [[nodiscard]] Result<MeridionalGeometry>
 buildGeometry(const PumpParams& params);
 
-} // namespace ggm::core
+}

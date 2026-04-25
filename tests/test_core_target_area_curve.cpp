@@ -5,8 +5,7 @@
 
 using Catch::Matchers::WithinAbs;
 
-TEST_CASE("TargetAreaCurve keeps two-point curves linear",
-          "[core][target_area_curve]")
+TEST_CASE("TargetAreaCurve keeps two-point curves linear", "[core][target_area_curve]")
 {
   const ggm::core::TargetAreaCurve curve({{0.0, 1.0}, {1.0, 3.0}});
 
@@ -28,8 +27,7 @@ TEST_CASE("TargetAreaCurve uses smooth PCHIP interpolation through control point
   REQUIRE_THAT(curve.evaluate(0.2), WithinAbs(1.5403153153153153, 1e-12));
 }
 
-TEST_CASE("TargetAreaCurve PCHIP preserves monotone target shape",
-          "[core][target_area_curve]")
+TEST_CASE("TargetAreaCurve PCHIP preserves monotone target shape", "[core][target_area_curve]")
 {
   const ggm::core::TargetAreaCurve curve({{0.0, 0.55}, {0.4, 0.78}, {0.75, 0.92}, {1.0, 1.0}});
 

@@ -25,4 +25,4 @@ drawSettingsPanel(const core::ComputationSettings& compSettings,
                   std::chrono::milliseconds lastDuration,
                   unsigned int dockspaceId) noexcept;
 
-} // namespace ggm::gui
+}

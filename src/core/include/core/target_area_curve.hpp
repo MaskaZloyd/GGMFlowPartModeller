@@ -33,4 +33,4 @@ private:
   std::vector<TargetAreaPoint> points_;
 };
 
-} // namespace ggm::core
+}

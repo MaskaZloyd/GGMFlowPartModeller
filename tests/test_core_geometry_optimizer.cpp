@@ -50,7 +50,7 @@ makeSelfTargetCurve(const ggm::core::PumpParams& params, const int sampleCount)
   return makeTargetCurveFromSamples(*samples);
 }
 
-} // namespace
+}
 
 TEST_CASE("normalizedAreaSamples normalizes by outlet area", "[core][geometry_optimizer]")
 {

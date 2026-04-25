@@ -11,7 +11,7 @@ using namespace ggm::math;
 using Catch::Matchers::WithinAbs;
 
 namespace {
-// Minimal straight hub and shroud, nh points each.
+
 std::vector<Vec2>
 straightLine(double r, int nh)
 {
@@ -22,12 +22,12 @@ straightLine(double r, int nh)
   }
   return pts;
 }
-} // namespace
+}
 
 TEST_CASE("buildStripGrid: returns error on mismatched input sizes", "[strip_grid]")
 {
   const auto hub = straightLine(0.0, 5);
-  const auto shroud = straightLine(1.0, 4); // different size
+  const auto shroud = straightLine(1.0, 4);
   const auto result = buildStripGrid(hub, shroud, 5);
   REQUIRE(!result.has_value());
 }
@@ -73,7 +73,7 @@ TEST_CASE("buildStripGrid: boundary node counts equal nh", "[strip_grid]")
 TEST_CASE("buildStripGrid: hub nodes have r=0, shroud nodes have r=2 (before smoothing)",
           "[strip_grid]")
 {
-  // Use a large nh so that boundary pinning dominates over smoothing
+
   constexpr int nh = 10;
   constexpr int m = 3;
   const auto hub = straightLine(0.0, nh);
@@ -82,7 +82,6 @@ TEST_CASE("buildStripGrid: hub nodes have r=0, shroud nodes have r=2 (before smo
   const auto result = buildStripGrid(hub, shroud, m);
   REQUIRE(result.has_value());
 
-  // Laplace smoothing pins boundary rows — first and last rows intact
   for (int i = 0; i < nh; ++i) {
     const auto hubIdx = static_cast<std::size_t>(result->hubNodes[static_cast<std::size_t>(i)]);
     REQUIRE_THAT(result->nodes[hubIdx].y(), WithinAbs(0.0, 1e-10));

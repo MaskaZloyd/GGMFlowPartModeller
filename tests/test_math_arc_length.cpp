@@ -27,7 +27,7 @@ TEST_CASE("resampleArcLength: single point returns empty output", "[arc_length]"
 
 TEST_CASE("resampleArcLength: output has requested point count", "[arc_length]")
 {
-  // Horizontal segment of length 4
+
   const std::vector<Vec2> line{{0.0, 0.0}, {2.0, 0.0}, {4.0, 0.0}};
   constexpr int n = 9;
   const auto result = resampleArcLength(line, n);
@@ -45,7 +45,7 @@ TEST_CASE("resampleArcLength: endpoints preserved for straight line", "[arc_leng
 
 TEST_CASE("resampleArcLength: equal spacing on straight line", "[arc_length]")
 {
-  // Straight line: resampled points must be equally spaced
+
   const std::vector<Vec2> line{{0.0, 0.0}, {10.0, 0.0}};
   constexpr int n = 6;
   const auto result = resampleArcLength(line, n);

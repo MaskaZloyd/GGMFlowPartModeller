@@ -16,7 +16,7 @@ AsyncFlowSolver::submit(MeridionalGeometry geom,
                         PumpParams params,
                         ComputationSettings settings) noexcept
 {
-  // Increment generation to signal cancellation for any in-flight job.
+
   std::uint64_t newGen = currentGen_.fetch_add(1, std::memory_order_release) + 1;
 
   {
@@ -25,11 +25,8 @@ AsyncFlowSolver::submit(MeridionalGeometry geom,
   }
   logging::solver()->debug("submit gen={}", newGen);
 
-  // Wrap geometry in shared_ptr so the lambda stays const-callable (TBB requires).
   auto geomPtr = std::make_shared<MeridionalGeometry>(std::move(geom));
 
-  // Run inside the arena so all workers use the arena's thread pool, and
-  // associate with group_ so cancelAndWait() can block properly.
   arena_.execute([this, newGen, geomPtr, params, settings]() {
     group_.run([this, newGen, geomPtr, params, settings]() {
       workerRun(newGen, *geomPtr, params, settings);
@@ -50,7 +47,6 @@ AsyncFlowSolver::workerRun(std::uint64_t jobGen,
     return currentGen_.load(std::memory_order_acquire) != jobGen;
   };
 
-  // Early exit if already superseded before we even started.
   if (isCancelled()) {
     logging::solver()->debug("early cancel gen={}", jobGen);
     return;
@@ -60,7 +56,6 @@ AsyncFlowSolver::workerRun(std::uint64_t jobGen,
   solver.setConfig(settings);
   auto result = solver.solve(geom, params, isCancelled);
 
-  // Final cancellation check before publishing result.
   if (isCancelled()) {
     return;
   }
@@ -136,11 +131,11 @@ AsyncFlowSolver::snapshot() const noexcept
 void
 AsyncFlowSolver::cancelAndWait() noexcept
 {
-  // Increment gen → in-flight workers will see mismatch at next check.
+
   currentGen_.fetch_add(1, std::memory_order_release);
-  // Wait for any enqueued work in the arena to finish.
+
   arena_.execute([this]() { group_.wait(); });
-  // Discard any pending result from a cancelled job.
+
   std::lock_guard<std::mutex> lock(mutex_);
   pendingResult_.reset();
   {
@@ -151,4 +146,4 @@ AsyncFlowSolver::cancelAndWait() noexcept
   }
 }
 
-} // namespace ggm::core
+}
