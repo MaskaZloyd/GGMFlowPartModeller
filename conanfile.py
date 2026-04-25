@@ -3,6 +3,7 @@ from conan.tools.cmake import CMakeToolchain, CMakeDeps
 
 
 class GGMFlowPartModellerConan(ConanFile):
+    license = "MIT"
     settings = "os", "compiler", "build_type", "arch"
 
     def requirements(self):
