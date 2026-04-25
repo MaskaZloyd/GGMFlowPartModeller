@@ -34,4 +34,8 @@ target_link_libraries(gui
     PRIVATE imgui::imgui glfw GLEW::GLEW opengl::opengl
 )
 
-target_compile_definitions(gui PRIVATE GLFW_INCLUDE_NONE)
+target_compile_definitions(gui
+    PRIVATE
+        GLFW_INCLUDE_NONE
+        GGM_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets"
+)

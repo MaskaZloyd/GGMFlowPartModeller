@@ -55,7 +55,13 @@ AppWindow::create(WindowConfig cfg) noexcept
   imguiIo.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   imguiIo.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
+#ifndef GGM_ASSET_DIR
+#define GGM_ASSET_DIR "assets"
+#endif
+
   constexpr const char* FONT_CANDIDATES[] = {
+    GGM_ASSET_DIR "/fonts/InterVariable.ttf",
+    "assets/fonts/InterVariable.ttf",
     "C:/Windows/Fonts/segoeui.ttf",
     "C:/Windows/Fonts/arial.ttf",
     "C:/Windows/Fonts/tahoma.ttf",
@@ -68,7 +74,7 @@ AppWindow::create(WindowConfig cfg) noexcept
   const ImWchar* cyrillicRanges = imguiIo.Fonts->GetGlyphRangesCyrillic();
   bool fontLoaded = false;
   for (const char* path : FONT_CANDIDATES) {
-    if (imguiIo.Fonts->AddFontFromFileTTF(path, 17.0F, nullptr, cyrillicRanges) != nullptr) {
+    if (imguiIo.Fonts->AddFontFromFileTTF(path, 16.5F, nullptr, cyrillicRanges) != nullptr) {
       fontLoaded = true;
       break;
     }
