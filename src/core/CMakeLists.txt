@@ -7,6 +7,8 @@ add_library(core STATIC
     src/streamline_extractor.cpp
     src/velocity_field.cpp
     src/area_profile.cpp
+    src/blade_geometry.cpp
+    src/blade_solver.cpp
     src/flow_solver.cpp
     src/async_flow_solver.cpp
     src/target_area_curve.cpp
