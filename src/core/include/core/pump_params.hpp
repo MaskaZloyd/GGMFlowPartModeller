@@ -41,9 +41,8 @@ struct PumpParams
   /// Inlet duct diameter
   double din = 212.0;
 
-  /// Design flow rate (m^3/s). 0.5 m³/s was unrealistic for a ≤ Ø300 mm
-  /// impeller — tip speeds exceeded 100 m/s. 0.05 m³/s (≈180 m³/h) lands
-  /// in a sensible rated-duty band for a medium-size centrifugal pump.
+  /// Design flow rate (m^3/s). UI ownership is in BladeDesignParams; this
+  /// field is kept synchronized for the existing flow/velocity solver.
   double qM3s = 0.05;
 
   auto operator==(const PumpParams&) const -> bool = default;

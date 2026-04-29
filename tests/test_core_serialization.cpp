@@ -2,6 +2,7 @@
 #include "core/serialization.hpp"
 
 #include <filesystem>
+#include <fstream>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
@@ -63,6 +64,55 @@ TEST_CASE("saveParams / loadParams: default params round-trip", "[serialization]
   const auto loadResult = loadParams(path);
   REQUIRE(loadResult.has_value());
   REQUIRE(*loadResult == defaults);
+
+  std::filesystem::remove(path);
+}
+
+TEST_CASE("saveProject / loadProject: blade design params round-trip", "[serialization]")
+{
+  ProjectData project;
+  project.pumpParams.d2 = 430.0;
+  project.bladeDesign.bladeCount = 8;
+  project.bladeDesign.flowRateM3s = 0.072;
+  project.bladeDesign.rpm = 2900.0;
+  project.bladeDesign.autoInletAngle = false;
+  project.bladeDesign.beta1Deg = 18.0;
+  project.bladeDesign.angleLaw = BladeAngleLaw::Bezier;
+  project.bladeDesign.thicknessLaw = BladeThicknessLaw::Linear;
+
+  const auto path = tmpPath();
+  const auto saveResult = saveProject(project, path);
+  REQUIRE(saveResult.has_value());
+
+  const auto loadResult = loadProject(path);
+  REQUIRE(loadResult.has_value());
+  project.pumpParams.qM3s = project.bladeDesign.flowRateM3s;
+  REQUIRE(loadResult->pumpParams == project.pumpParams);
+  REQUIRE(loadResult->bladeDesign == project.bladeDesign);
+
+  std::filesystem::remove(path);
+}
+
+TEST_CASE("loadProject: old JSON without bladeDesign uses defaults", "[serialization]")
+{
+  const auto path = tmpPath();
+  {
+    std::ofstream file(path);
+    file << R"json({
+      "version": 1,
+      "d2": 420.0,
+      "din": 215.0,
+      "qM3s": 0.061
+    })json";
+  }
+
+  const auto loadResult = loadProject(path);
+  REQUIRE(loadResult.has_value());
+  REQUIRE(loadResult->pumpParams.d2 == 420.0);
+  REQUIRE(loadResult->pumpParams.din == 215.0);
+  BladeDesignParams defaults;
+  defaults.flowRateM3s = 0.061;
+  REQUIRE(loadResult->bladeDesign == defaults);
 
   std::filesystem::remove(path);
 }
