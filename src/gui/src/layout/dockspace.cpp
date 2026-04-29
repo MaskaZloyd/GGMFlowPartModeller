@@ -16,6 +16,8 @@ constexpr const char* ROOT_DOCKSPACE_WINDOW = "##DockspaceRoot";
 constexpr const char* ROOT_DOCKSPACE_NAME = "MainDockSpace";
 constexpr const char* MERIDIONAL_MODULE_WINDOW_TITLE = "Меридианное сечение";
 constexpr const char* MERIDIONAL_MODULE_DOCKSPACE_NAME = "MeridionalSectionDockSpace";
+constexpr const char* BLADE_MODULE_WINDOW_TITLE = "Лопаточная система";
+constexpr const char* BLADE_MODULE_DOCKSPACE_NAME = "BladeDesignDockSpaceV2";
 constexpr const char* REVERSE_MODULE_WINDOW_TITLE = "Обратное проектирование";
 constexpr const char* REVERSE_MODULE_DOCKSPACE_NAME = "ReverseDesignDockSpace";
 constexpr bool REVERSE_DESIGN_ENABLED = false;
@@ -46,6 +48,7 @@ buildRootModulesLayout(ImGuiID dockspaceId) noexcept
     ImGui::DockBuilderSplitNode(modulesNode, ImGuiDir_Down, 0.20F, nullptr, &modulesNode);
 
   ImGui::DockBuilderDockWindow(MERIDIONAL_MODULE_WINDOW_TITLE, modulesNode);
+  ImGui::DockBuilderDockWindow(BLADE_MODULE_WINDOW_TITLE, modulesNode);
   if constexpr (REVERSE_DESIGN_ENABLED) {
     ImGui::DockBuilderDockWindow(REVERSE_MODULE_WINDOW_TITLE, modulesNode);
   }
@@ -106,6 +109,35 @@ drawModuleWindow(const char* windowTitle,
   ImGui::End();
 
   return moduleDockspaceId;
+}
+
+void
+buildBladeDesignLayout(ImGuiID dockspaceId, ImVec2 size) noexcept
+{
+  if (dockspaceId == 0 || ImGui::DockBuilderGetNode(dockspaceId) != nullptr) {
+    return;
+  }
+
+  ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
+  ImGui::DockBuilderSetNodeSize(dockspaceId, size);
+
+  ImGuiID centerNode = dockspaceId;
+  ImGuiID paramsNode =
+    ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Left, 0.25F, nullptr, &centerNode);
+  ImGuiID tablesNode =
+    ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Right, 0.28F, nullptr, &centerNode);
+  ImGuiID headCurveNode =
+    ImGui::DockBuilderSplitNode(tablesNode, ImGuiDir_Down, 0.42F, nullptr, &tablesNode);
+  ImGuiID bottomNode =
+    ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Down, 0.42F, nullptr, &centerNode);
+
+  ImGui::DockBuilderDockWindow("Параметры лопаточной системы", paramsNode);
+  ImGui::DockBuilderDockWindow("План РК", centerNode);
+  ImGui::DockBuilderDockWindow("Конформная диаграмма", bottomNode);
+  ImGui::DockBuilderDockWindow("Характеристики лопатки", bottomNode);
+  ImGui::DockBuilderDockWindow("Таблицы лопаточной системы", tablesNode);
+  ImGui::DockBuilderDockWindow("Напорная характеристика", headCurveNode);
+  ImGui::DockBuilderFinish(dockspaceId);
 }
 
 void
@@ -235,6 +267,10 @@ buildDockspace(bool canUndo, bool canRedo) noexcept
                                                   MERIDIONAL_MODULE_DOCKSPACE_NAME,
                                                   dockspaceId,
                                                   buildMeridionalSectionLayout);
+  layout.bladeDesignDockspaceId = drawModuleWindow(BLADE_MODULE_WINDOW_TITLE,
+                                                   BLADE_MODULE_DOCKSPACE_NAME,
+                                                   dockspaceId,
+                                                   buildBladeDesignLayout);
   if constexpr (REVERSE_DESIGN_ENABLED) {
     layout.reverseDesignDockspaceId = drawModuleWindow(REVERSE_MODULE_WINDOW_TITLE,
                                                        REVERSE_MODULE_DOCKSPACE_NAME,

@@ -3,6 +3,7 @@ add_library(gui STATIC
     src/theme.cpp
     src/window/app_window.cpp
     src/renderer/fbo.cpp
+    src/renderer/blade_plan_renderer.cpp
     src/renderer/geometry_renderer.cpp
     src/commands/edit_command.cpp
     src/commands/undo_stack.cpp
@@ -10,6 +11,7 @@ add_library(gui STATIC
     src/solver_status_display.cpp
     src/panels/params_panel.cpp
     src/panels/geometry_panel.cpp
+    src/panels/blade_design_panel.cpp
     src/panels/charts_panel.cpp
     src/panels/settings_panel.cpp
     src/panels/log_panel.cpp

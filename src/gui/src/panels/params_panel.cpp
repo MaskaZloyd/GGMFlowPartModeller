@@ -98,15 +98,6 @@ drawParamsPanel(const core::PumpParams& current,
               nullptr,
               state,
               "Диаметр входного патрубка");
-    paramDrag("q",
-              "Q — расход, м³/с",
-              &params.qM3s,
-              &MIN_POSITIVE,
-              nullptr,
-              state,
-              "Расчётный объёмный расход. Задаёт абсолютный масштаб |V|.\n"
-              "Для колеса Ø200–300 мм реалистичный диапазон — 0.01…0.1 м³/с "
-              "(≈ 36…360 м³/ч).");
   }
 
   if (ImGui::CollapsingHeader("Дуги втулки", ImGuiTreeNodeFlags_DefaultOpen)) {

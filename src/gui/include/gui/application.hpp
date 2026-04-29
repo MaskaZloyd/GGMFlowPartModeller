@@ -5,8 +5,10 @@
 #include "gui/commands/edit_command.hpp"
 #include "gui/commands/undo_stack.hpp"
 #include "gui/panels/geometry_panel.hpp"
+#include "gui/panels/blade_design_panel.hpp"
 #include "gui/panels/params_panel.hpp"
 #include "gui/panels/reverse_design_panel.hpp"
+#include "gui/renderer/blade_plan_renderer.hpp"
 #include "gui/renderer/fbo.hpp"
 #include "gui/renderer/geometry_renderer.hpp"
 #include "gui/renderer/render_settings.hpp"
@@ -50,10 +52,13 @@ private:
   Fbo geometryFbo_;
   GeometryRenderer geometryRenderer_;
   GeometryPanelState geometryPanelState_;
+  Fbo bladePlanFbo_;
+  BladePlanRenderer bladePlanRenderer_;
   std::filesystem::path currentPath_;
   RenderSettings renderSettings_;
   std::unique_ptr<core::AsyncFlowSolver> asyncSolver_;
   ParamsPanelState paramsPanelState_;
+  BladeDesignPanelState bladeDesignPanelState_;
   ReverseDesignPanelState reverseDesignPanelState_;
 };
 

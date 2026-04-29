@@ -24,6 +24,7 @@ struct DockspaceLayout
   DockspaceActions actions;
   unsigned int rootDockspaceId = 0;
   unsigned int meridionalDockspaceId = 0;
+  unsigned int bladeDesignDockspaceId = 0;
   unsigned int reverseDesignDockspaceId = 0;
 };
 

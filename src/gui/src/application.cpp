@@ -4,6 +4,7 @@
 #include "core/serialization.hpp"
 #include "gui/layout/dockspace.hpp"
 #include "gui/panels/charts_panel.hpp"
+#include "gui/panels/blade_design_panel.hpp"
 #include "gui/panels/geometry_panel.hpp"
 #include "gui/panels/log_panel.hpp"
 #include "gui/panels/params_panel.hpp"
@@ -149,6 +150,25 @@ Application::run() noexcept
       }
     }
 
+    if (dockLayout.bladeDesignDockspaceId != 0) {
+      auto bladeResult = drawBladeDesignPanel(bladeDesignPanelState_,
+                                              bladePlanFbo_,
+                                              bladePlanRenderer_,
+                                              model_.bladeDesignParams(),
+                                              model_.params(),
+                                              model_.geometry(),
+                                              flowPtr,
+                                              model_.geometryValid(),
+                                              dockLayout.bladeDesignDockspaceId);
+      if (bladeResult.paramsChanged) {
+        model_.setBladeDesignParams(bladeResult.params);
+        model_.setFlowRateM3s(bladeResult.params.flowRateM3s);
+        if (model_.geometryValid()) {
+          asyncSolver_->submit(model_.geometry(), model_.params(), model_.compSettings());
+        }
+      }
+    }
+
     drawLogPanel(dockLayout.rootDockspaceId);
 
     window_.endFrame();
@@ -194,7 +214,12 @@ Application::handleSave() noexcept
     handleSaveAs();
     return;
   }
-  auto result = core::saveParams(model_.params(), currentPath_);
+  core::ProjectData project{
+    .pumpParams = model_.params(),
+    .bladeDesign = model_.bladeDesignParams(),
+  };
+  project.pumpParams.qM3s = project.bladeDesign.flowRateM3s;
+  auto result = core::saveProject(project, currentPath_);
   if (result) {
     logging::gui()->info("Сохранено в {}", currentPath_.string());
   } else {
@@ -213,16 +238,18 @@ void
 Application::handleOpen() noexcept
 {
   std::filesystem::path path = "pump_project.ggm";
-  auto result = core::loadParams(path);
+  auto result = core::loadProject(path);
   if (result) {
     auto oldParams = model_.params();
-    model_.setParams(*result);
+    model_.setBladeDesignParams(result->bladeDesign);
+    result->pumpParams.qM3s = result->bladeDesign.flowRateM3s;
+    model_.setParams(result->pumpParams);
     if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
       logging::gui()->warn("Ошибка построения геометрии: {}", core::toString(rebuilt.error()));
     }
     undoStack_.push(EditCommand{
       .before = oldParams,
-      .after = *result,
+      .after = result->pumpParams,
       .label = "Open file",
     });
     currentPath_ = path;
@@ -238,6 +265,7 @@ Application::handleNew() noexcept
   auto oldParams = model_.params();
   core::PumpParams defaultParams;
   model_.setParams(defaultParams);
+  model_.setBladeDesignParams(core::BladeDesignParams{});
   if (auto rebuilt = model_.rebuildGeometry(); !rebuilt) {
     logging::gui()->warn("Ошибка построения геометрии: {}", core::toString(rebuilt.error()));
   }
