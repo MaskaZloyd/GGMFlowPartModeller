@@ -5,6 +5,14 @@ add_library(gui STATIC
     src/renderer/fbo.cpp
     src/renderer/blade_plan_renderer.cpp
     src/renderer/geometry_renderer.cpp
+    src/renderer/opengl/gl_shader_program.cpp
+    src/renderer/opengl/gl_buffer.cpp
+    src/renderer/opengl/gl_vertex_array.cpp
+    src/renderer/opengl/gl_state_guard.cpp
+    src/renderer/opengl/render_target_2d.cpp
+    src/renderer/geometry/plot_viewport.cpp
+    src/renderer/geometry/sdf_line_renderer_2d.cpp
+    src/renderer/geometry/mesh_renderer_2d.cpp
     src/commands/edit_command.cpp
     src/commands/undo_stack.cpp
     src/layout/dockspace.cpp

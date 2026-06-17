@@ -1,108 +1,41 @@
 #include "gui/renderer/geometry_renderer.hpp"
 
-#include "gl_headers.hpp"
+#include "gui/renderer/geometry/plot_viewport.hpp"
+#include "gui/renderer/opengl/gl_state_guard.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <limits>
-#include <numeric>
 #include <span>
-#include <string_view>
-#include <utility>
-#include <vector>
 
 namespace ggm::gui {
-
 namespace {
 
-using PointSpan = std::span<const math::Vec2>;
-using VertexSpan = std::span<const float>;
-
-constexpr std::string_view kVertexShaderSource = R"glsl(
-#version 330 core
-layout(location = 0) in vec2 aPos;
-layout(location = 1) in vec3 aColor;
-uniform vec4 uViewport;
-uniform int  uUseVertexColor;
-out vec3 vColor;
-void main() {
-    float ndcX = 2.0 * (aPos.x - uViewport.x) / uViewport.z - 1.0;
-    float ndcY = 2.0 * (aPos.y - uViewport.y) / uViewport.w - 1.0;
-    gl_Position = vec4(ndcX, ndcY, 0.0, 1.0);
-    vColor = aColor;
-    if (uUseVertexColor == 0) { vColor = vec3(0.0); }
-}
-)glsl";
-
-constexpr std::string_view kFragmentShaderSource = R"glsl(
-#version 330 core
-in  vec3 vColor;
-uniform vec3 uColor;
-uniform int  uUseVertexColor;
-uniform float uAlpha;
-out vec4 FragColor;
-void main() {
-    vec3 c = (uUseVertexColor == 1) ? vColor : uColor;
-    FragColor = vec4(c, uAlpha);
-}
-)glsl";
-
-constexpr float kDefaultLineWidth = 1.0F;
-constexpr double kViewportPaddingFraction = 0.1;
 constexpr int kTargetGridLineCount = 8;
-constexpr double kMinimumExtent = 1.0e-3;
+constexpr auto kBackground = Rgba{0.988F, 0.990F, 0.994F, 1.0F};
+constexpr auto kMinorGridColor = Rgba{0.900F, 0.905F, 0.915F, 0.70F};
+constexpr auto kMajorGridColor = Rgba{0.780F, 0.790F, 0.810F, 0.85F};
+constexpr auto kComputationalGridColor = Rgba{0.550F, 0.620F, 0.710F, 0.72F};
+constexpr auto kMeanLineColor = Rgba{0.930F, 0.560F, 0.120F, 0.95F};
+constexpr auto kHubColor = Rgba{0.780F, 0.200F, 0.180F, 1.0F};
+constexpr auto kShroudColor = Rgba{0.180F, 0.360F, 0.780F, 1.0F};
+constexpr auto kContourOutlineColor = Rgba{1.0F, 1.0F, 1.0F, 0.72F};
 
-struct Rgb
-{
-  float r;
-  float g;
-  float b;
-};
-
-constexpr auto kMinorGridColor = Rgb{0.900F, 0.905F, 0.915F};
-constexpr auto kMajorGridColor = Rgb{0.780F, 0.790F, 0.810F};
-constexpr auto kComputationalGridColor = Rgb{0.550F, 0.620F, 0.710F};
-constexpr auto kMeanLineColor = Rgb{0.08F, 0.09F, 0.12F};
-constexpr auto kHubColor = Rgb{0.780F, 0.200F, 0.180F};
-constexpr auto kShroudColor = Rgb{0.180F, 0.360F, 0.780F};
-
-[[nodiscard]] GLuint
-compileShader(const GLenum type, const std::string_view source) noexcept
-{
-  const auto* sourcePtr = source.data();
-  const auto sourceLength = static_cast<GLint>(source.size());
-  const auto shader = glCreateShader(type);
-  if (shader == 0U) {
-    return 0;
-  }
-
-  glShaderSource(shader, 1, &sourcePtr, &sourceLength);
-  glCompileShader(shader);
-
-  GLint success{};
-  glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-  if (success == GL_FALSE) {
-    glDeleteShader(shader);
-    return 0;
-  }
-  return shader;
-}
-
-[[nodiscard]] Rgb
-viridisColor(float t) noexcept
+[[nodiscard]] Rgba
+viridisColor(float t, float alpha = 1.0F) noexcept
 {
   t = std::clamp(t, 0.0F, 1.0F);
-  static constexpr auto kStops = std::to_array<Rgb>({
-    {0.267F, 0.005F, 0.329F},
-    {0.275F, 0.125F, 0.474F},
-    {0.230F, 0.318F, 0.545F},
-    {0.173F, 0.449F, 0.558F},
-    {0.128F, 0.567F, 0.551F},
-    {0.135F, 0.659F, 0.518F},
-    {0.267F, 0.749F, 0.440F},
-    {0.526F, 0.830F, 0.288F},
-    {0.993F, 0.906F, 0.144F},
+  static constexpr auto kStops = std::to_array<Rgba>({
+    {0.267F, 0.005F, 0.329F, 1.0F},
+    {0.275F, 0.125F, 0.474F, 1.0F},
+    {0.230F, 0.318F, 0.545F, 1.0F},
+    {0.173F, 0.449F, 0.558F, 1.0F},
+    {0.128F, 0.567F, 0.551F, 1.0F},
+    {0.135F, 0.659F, 0.518F, 1.0F},
+    {0.267F, 0.749F, 0.440F, 1.0F},
+    {0.526F, 0.830F, 0.288F, 1.0F},
+    {0.993F, 0.906F, 0.144F, 1.0F},
   });
 
   const auto scaled = t * static_cast<float>(kStops.size() - 1U);
@@ -110,218 +43,16 @@ viridisColor(float t) noexcept
   const auto fraction = scaled - static_cast<float>(lowerIndex);
   const auto& a = kStops[lowerIndex];
   const auto& b = kStops[lowerIndex + 1U];
-
-  return {a.r + fraction * (b.r - a.r), a.g + fraction * (b.g - a.g), a.b + fraction * (b.b - a.b)};
+  return Rgba{
+    .r = a.r + fraction * (b.r - a.r),
+    .g = a.g + fraction * (b.g - a.g),
+    .b = a.b + fraction * (b.b - a.b),
+    .a = alpha,
+  };
 }
 
-struct BoundingBox
-{
-  double minZ = std::numeric_limits<double>::max();
-  double maxZ = std::numeric_limits<double>::lowest();
-  double minR = std::numeric_limits<double>::max();
-  double maxR = std::numeric_limits<double>::lowest();
-
-  void expand(const PointSpan points) noexcept
-  {
-    for (const auto& point : points) {
-      minZ = std::min(minZ, point.x());
-      maxZ = std::max(maxZ, point.x());
-      minR = std::min(minR, point.y());
-      maxR = std::max(maxR, point.y());
-    }
-  }
-
-  [[nodiscard]] bool hasData() const noexcept { return minZ <= maxZ && minR <= maxR; }
-
-  void addPadding(const double fraction) noexcept
-  {
-    const auto rangeZ = maxZ - minZ;
-    const auto rangeR = maxR - minR;
-    const auto padZ = rangeZ * fraction;
-    const auto padR = rangeR * fraction;
-    minZ -= padZ;
-    maxZ += padZ;
-    minR -= padR;
-    maxR += padR;
-  }
-
-  void ensureNonDegenerate() noexcept
-  {
-    ensureAxis(minZ, maxZ);
-    ensureAxis(minR, maxR);
-  }
-
-private:
-  static void ensureAxis(double& minValue, double& maxValue) noexcept
-  {
-    if (maxValue > minValue) {
-      return;
-    }
-
-    const auto center = std::midpoint(minValue, maxValue);
-    const auto scale = std::max({std::abs(center), std::abs(minValue), std::abs(maxValue), 1.0});
-    const auto halfExtent = std::max(scale * 0.025, kMinimumExtent);
-
-    minValue = center - halfExtent;
-    maxValue = center + halfExtent;
-  }
-};
-
-struct RenderViewport
-{
-  BoundingBox bounds;
-  double rangeZ = 0.0;
-  double rangeR = 0.0;
-
-  [[nodiscard]] ViewportMap toMap(const int viewportWidth, const int viewportHeight) const noexcept
-  {
-    return ViewportMap{
-      .minZ = bounds.minZ,
-      .maxZ = bounds.maxZ,
-      .minR = bounds.minR,
-      .maxR = bounds.maxR,
-      .widthPx = viewportWidth,
-      .heightPx = viewportHeight,
-    };
-  }
-};
-
-struct DrawUniforms
-{
-  GLint viewport = -1;
-  GLint color = -1;
-  GLint useVertexColor = -1;
-  GLint alpha = -1;
-};
-
-class DrawSession
-{
-public:
-  DrawSession(const GLuint shaderProgram,
-              const GLuint vao,
-              const GLuint vbo,
-              const DrawUniforms uniforms,
-              const float maxLineWidth,
-              std::vector<float>& scratchVertices) noexcept
-    : shaderProgram_(shaderProgram),
-      vao_(vao),
-      vbo_(vbo),
-      uniforms_(uniforms),
-      maxLineWidth_(maxLineWidth),
-      scratchVertices_(scratchVertices)
-  {
-    glUseProgram(shaderProgram_);
-    glBindVertexArray(vao_);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    setUseVertexColor(false);
-    setAlpha(1.0F);
-  }
-
-  ~DrawSession()
-  {
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-    glLineWidth(kDefaultLineWidth);
-    glUseProgram(0);
-  }
-
-  DrawSession(const DrawSession&) = delete;
-  DrawSession& operator=(const DrawSession&) = delete;
-  DrawSession(DrawSession&&) = delete;
-  DrawSession& operator=(DrawSession&&) = delete;
-
-  void setViewport(const RenderViewport& viewport) const noexcept
-  {
-    glUniform4f(uniforms_.viewport,
-                static_cast<float>(viewport.bounds.minZ),
-                static_cast<float>(viewport.bounds.minR),
-                static_cast<float>(viewport.rangeZ),
-                static_cast<float>(viewport.rangeR));
-  }
-
-  void setColor(const Rgb color) const noexcept
-  {
-    glUniform3f(uniforms_.color, color.r, color.g, color.b);
-  }
-
-  void setAlpha(const float alpha) const noexcept { glUniform1f(uniforms_.alpha, alpha); }
-
-  void setUseVertexColor(const bool enabled) const noexcept
-  {
-    glUniform1i(uniforms_.useVertexColor, enabled ? 1 : 0);
-    if (enabled) {
-
-      glVertexAttribPointer(
-        0, 2, GL_FLOAT, GL_FALSE, 5 * static_cast<GLsizei>(sizeof(float)), nullptr);
-      glVertexAttribPointer(1,
-                            3,
-                            GL_FLOAT,
-                            GL_FALSE,
-                            5 * static_cast<GLsizei>(sizeof(float)),
-                            reinterpret_cast<const void*>(2 * sizeof(float)));
-      glEnableVertexAttribArray(1);
-    } else {
-
-      glVertexAttribPointer(
-        0, 2, GL_FLOAT, GL_FALSE, 2 * static_cast<GLsizei>(sizeof(float)), nullptr);
-      glDisableVertexAttribArray(1);
-    }
-  }
-
-  void setLineWidth(const float width) const noexcept
-  {
-    glLineWidth(std::clamp(width, kDefaultLineWidth, maxLineWidth_));
-  }
-
-  void drawPolyline(const PointSpan points, const GLenum mode = GL_LINE_STRIP) const noexcept
-  {
-    if (points.empty()) {
-      return;
-    }
-
-    scratchVertices_.clear();
-    scratchVertices_.reserve(points.size() * 2U);
-    for (const auto& point : points) {
-      scratchVertices_.push_back(static_cast<float>(point.x()));
-      scratchVertices_.push_back(static_cast<float>(point.y()));
-    }
-
-    drawVertices(scratchVertices_, mode, 2);
-  }
-
-  void drawColoredVertices(const VertexSpan vertices, const GLenum mode) const noexcept
-  {
-    drawVertices(vertices, mode, 5);
-  }
-
-  void drawVertices(const VertexSpan vertices,
-                    const GLenum mode,
-                    const std::size_t floatsPerVertex = 2U) const noexcept
-  {
-    if (vertices.empty() || floatsPerVertex == 0U) {
-      return;
-    }
-
-    glBufferData(GL_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(vertices.size_bytes()),
-                 vertices.data(),
-                 GL_DYNAMIC_DRAW);
-    glDrawArrays(mode, 0, static_cast<GLsizei>(vertices.size() / floatsPerVertex));
-  }
-
-  [[nodiscard]] std::vector<float>& scratch() const noexcept { return scratchVertices_; }
-
-private:
-  GLuint shaderProgram_ = 0;
-  GLuint vao_ = 0;
-  GLuint vbo_ = 0;
-  DrawUniforms uniforms_{};
-  float maxLineWidth_ = kDefaultLineWidth;
-  std::vector<float>& scratchVertices_;
-};
-
 [[nodiscard]] double
-niceGridStep(const double range, const int targetLines) noexcept
+niceGridStep(double range, int targetLines) noexcept
 {
   if (range <= 0.0 || targetLines <= 0) {
     return 1.0;
@@ -340,111 +71,56 @@ niceGridStep(const double range, const int targetLines) noexcept
 }
 
 void
-configureFrame(const int viewportWidth, const int viewportHeight) noexcept
+appendSegment(std::vector<LineSegment2D>& out,
+              double z0,
+              double r0,
+              double z1,
+              double r1,
+              const LineStyle& style)
 {
-  glViewport(0, 0, viewportWidth, viewportHeight);
-  glClearColor(0.988F, 0.990F, 0.994F, 1.0F);
-  glClear(GL_COLOR_BUFFER_BIT);
-
-  glEnable(GL_MULTISAMPLE);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-}
-
-[[nodiscard]] RenderViewport
-makeViewport(const core::MeridionalGeometry& geom,
-             const int viewportWidth,
-             const int viewportHeight) noexcept
-{
-  auto bounds = BoundingBox{};
-  bounds.expand(geom.hubCurve);
-  bounds.expand(geom.shroudCurve);
-  bounds.addPadding(kViewportPaddingFraction);
-  bounds.ensureNonDegenerate();
-
-  auto rangeZ = bounds.maxZ - bounds.minZ;
-  auto rangeR = bounds.maxR - bounds.minR;
-
-  const auto aspectView = static_cast<double>(viewportWidth) / static_cast<double>(viewportHeight);
-  const auto aspectData = rangeZ / rangeR;
-
-  if (aspectData > aspectView) {
-    const auto newRangeR = rangeZ / aspectView;
-    const auto centerR = std::midpoint(bounds.minR, bounds.maxR);
-    bounds.minR = centerR - (newRangeR / 2.0);
-    bounds.maxR = centerR + (newRangeR / 2.0);
-    rangeR = newRangeR;
-  } else {
-    const auto newRangeZ = rangeR * aspectView;
-    const auto centerZ = std::midpoint(bounds.minZ, bounds.maxZ);
-    bounds.minZ = centerZ - (newRangeZ / 2.0);
-    bounds.maxZ = centerZ + (newRangeZ / 2.0);
-    rangeZ = newRangeZ;
-  }
-
-  return RenderViewport{
-    .bounds = bounds,
-    .rangeZ = rangeZ,
-    .rangeR = rangeR,
-  };
+  out.push_back(LineSegment2D{
+    .a = {z0, r0},
+    .b = {z1, r1},
+    .style = style,
+    .dashOffsetPx = 0.0,
+  });
 }
 
 void
-appendLine(std::vector<float>& vertices,
-           const double x0,
-           const double y0,
-           const double x1,
-           const double y1)
+drawCoordinateGrid(const PlotViewport& viewport,
+                   SdfLineRenderer2D& lineRenderer,
+                   std::vector<LineSegment2D>& scratch) noexcept
 {
-  vertices.push_back(static_cast<float>(x0));
-  vertices.push_back(static_cast<float>(y0));
-  vertices.push_back(static_cast<float>(x1));
-  vertices.push_back(static_cast<float>(y1));
-}
-
-void
-fillGridVertices(std::vector<float>& vertices, const BoundingBox& bounds, double gridStep)
-{
-  vertices.clear();
-  if (!bounds.hasData() || gridStep <= 0.0) {
-    return;
-  }
-
-  const auto minZ = std::floor(bounds.minZ / gridStep) * gridStep;
-  const auto maxZ = std::ceil(bounds.maxZ / gridStep) * gridStep;
-  const auto minR = std::floor(bounds.minR / gridStep) * gridStep;
-  const auto maxR = std::ceil(bounds.maxR / gridStep) * gridStep;
-
-  for (auto zValue = minZ; zValue <= (maxZ + (gridStep * 0.5)); zValue += gridStep) {
-    appendLine(vertices, zValue, minR, zValue, maxR);
-  }
-  for (auto rValue = minR; rValue <= (maxR + (gridStep * 0.5)); rValue += gridStep) {
-    appendLine(vertices, minZ, rValue, maxZ, rValue);
-  }
-}
-
-void
-drawCoordinateGrid(const RenderViewport& viewport, const DrawSession& drawSession) noexcept
-{
+  const auto map = viewport.toMap();
   const auto majorStep =
-    niceGridStep(std::max(viewport.rangeZ, viewport.rangeR), kTargetGridLineCount);
+    niceGridStep(std::max(viewport.rangeZ(), viewport.rangeR()), kTargetGridLineCount);
   const auto minorStep = majorStep / 5.0;
 
-  auto& vertices = drawSession.scratch();
+  const auto appendGrid = [&](double step, const LineStyle& style) {
+    scratch.clear();
+    const auto minZ = std::floor(map.minZ / step) * step;
+    const auto maxZ = std::ceil(map.maxZ / step) * step;
+    const auto minR = std::floor(map.minR / step) * step;
+    const auto maxR = std::ceil(map.maxR / step) * step;
+    for (auto z = minZ; z <= maxZ + (step * 0.5); z += step) {
+      appendSegment(scratch, z, minR, z, maxR, style);
+    }
+    for (auto r = minR; r <= maxR + (step * 0.5); r += step) {
+      appendSegment(scratch, minZ, r, maxZ, r, style);
+    }
+    lineRenderer.drawSegments(std::span<const LineSegment2D>{scratch.data(), scratch.size()},
+                              viewport);
+  };
 
-  drawSession.setLineWidth(kDefaultLineWidth);
-  drawSession.setColor(kMinorGridColor);
-  fillGridVertices(vertices, viewport.bounds, minorStep);
-  drawSession.drawVertices(vertices, GL_LINES);
-
-  drawSession.setLineWidth(1.2F);
-  drawSession.setColor(kMajorGridColor);
-  fillGridVertices(vertices, viewport.bounds, majorStep);
-  drawSession.drawVertices(vertices, GL_LINES);
+  appendGrid(minorStep, LineStyle{.color = kMinorGridColor, .thicknessPx = 1.0F});
+  appendGrid(majorStep, LineStyle{.color = kMajorGridColor, .thicknessPx = 1.25F});
 }
 
 void
-drawComputationalGrid(const core::FlowResults& flow, const DrawSession& drawSession) noexcept
+drawComputationalGrid(const core::FlowResults& flow,
+                      const PlotViewport& viewport,
+                      SdfLineRenderer2D& lineRenderer,
+                      std::vector<LineSegment2D>& scratch) noexcept
 {
   const auto& grid = flow.solution.grid;
   if (grid.nh <= 0 || grid.m <= 0) {
@@ -458,50 +134,41 @@ drawComputationalGrid(const core::FlowResults& flow, const DrawSession& drawSess
     return;
   }
 
-  auto vertices = std::vector<float>{};
-  vertices.reserve(rowCount * 4U);
-
-  for (auto row = std::size_t{0}; row < rowCount; ++row) {
+  const auto style = LineStyle{.color = kComputationalGridColor, .thicknessPx = 1.0F};
+  scratch.clear();
+  scratch.reserve(rowCount);
+  for (std::size_t row = 0; row < rowCount; ++row) {
     const auto hubIndex = row * columnCount;
     const auto shroudIndex = hubIndex + columnCount - 1U;
-    appendLine(vertices,
-               grid.nodes[hubIndex].x(),
-               grid.nodes[hubIndex].y(),
-               grid.nodes[shroudIndex].x(),
-               grid.nodes[shroudIndex].y());
+    scratch.push_back(LineSegment2D{
+      .a = grid.nodes[hubIndex],
+      .b = grid.nodes[shroudIndex],
+      .style = style,
+      .dashOffsetPx = 0.0,
+    });
   }
-
-  drawSession.setLineWidth(kDefaultLineWidth);
-  drawSession.setColor(kComputationalGridColor);
-  drawSession.drawVertices(vertices, GL_LINES);
+  lineRenderer.drawSegments(std::span<const LineSegment2D>{scratch.data(), scratch.size()},
+                            viewport);
 }
 
 [[nodiscard]] double
 maxStreamlineSpeed(const core::FlowResults& flow) noexcept
 {
   double peak = 0.0;
-  for (const auto& vel : flow.velocities) {
-    for (const auto& sample : vel.samples) {
+  for (const auto& velocity : flow.velocities) {
+    for (const auto& sample : velocity.samples) {
       peak = std::max(peak, sample.speed);
     }
   }
   return peak > 0.0 ? peak : 1.0;
 }
 
-inline void
-appendColoredVertex(std::vector<float>& out, double x, double y, Rgb color)
-{
-  out.push_back(static_cast<float>(x));
-  out.push_back(static_cast<float>(y));
-  out.push_back(color.r);
-  out.push_back(color.g);
-  out.push_back(color.b);
-}
-
 void
 drawVelocityHeatmap(const core::FlowResults& flow,
                     double peakSpeed,
-                    const DrawSession& drawSession) noexcept
+                    const PlotViewport& viewport,
+                    MeshRenderer2D& meshRenderer,
+                    std::vector<MeshVertex2D>& scratch) noexcept
 {
   const auto& grid = flow.solution.grid;
   if (grid.nodes.empty() || grid.triangles.empty() || flow.velocities.empty() || peakSpeed <= 0.0) {
@@ -509,265 +176,151 @@ drawVelocityHeatmap(const core::FlowResults& flow,
   }
 
   std::vector<float> nodeSpeed(grid.nodes.size(), 0.0F);
-  for (std::size_t n = 0; n < grid.nodes.size(); ++n) {
-    const auto& node = grid.nodes[n];
+  for (std::size_t nodeIndex = 0; nodeIndex < grid.nodes.size(); ++nodeIndex) {
+    const auto& node = grid.nodes[nodeIndex];
     double bestSq = std::numeric_limits<double>::max();
     double bestSpeed = 0.0;
-    for (const auto& vel : flow.velocities) {
-      for (const auto& sample : vel.samples) {
+    for (const auto& velocity : flow.velocities) {
+      for (const auto& sample : velocity.samples) {
         const double dz = sample.point.x() - node.x();
         const double dr = sample.point.y() - node.y();
-        const double d2 = (dz * dz) + (dr * dr);
-        if (d2 < bestSq) {
-          bestSq = d2;
+        const double distanceSq = (dz * dz) + (dr * dr);
+        if (distanceSq < bestSq) {
+          bestSq = distanceSq;
           bestSpeed = sample.speed;
         }
       }
     }
-    nodeSpeed[n] = static_cast<float>(bestSpeed);
+    nodeSpeed[nodeIndex] = static_cast<float>(bestSpeed);
   }
 
-  drawSession.setUseVertexColor(true);
-  drawSession.setAlpha(0.55F);
-
-  auto& vertices = drawSession.scratch();
-  vertices.clear();
-  vertices.reserve(grid.triangles.size() * 3U * 5U);
-
-  for (const auto& tri : grid.triangles) {
-    for (int corner = 0; corner < 3; ++corner) {
-      const int idx = tri[static_cast<std::size_t>(corner)];
-      if (idx < 0 || static_cast<std::size_t>(idx) >= grid.nodes.size()) {
-        continue;
+  scratch.clear();
+  scratch.reserve(grid.triangles.size() * 3U);
+  for (const auto& triangle : grid.triangles) {
+    auto valid = true;
+    for (int index : triangle) {
+      if (index < 0 || static_cast<std::size_t>(index) >= grid.nodes.size()) {
+        valid = false;
       }
-      const auto& p = grid.nodes[static_cast<std::size_t>(idx)];
-      const float t = std::clamp(
-        nodeSpeed[static_cast<std::size_t>(idx)] / static_cast<float>(peakSpeed), 0.0F, 1.0F);
-      appendColoredVertex(vertices, p.x(), p.y(), viridisColor(t));
+    }
+    if (!valid) {
+      continue;
+    }
+
+    for (int index : triangle) {
+      const auto nodeIndex = static_cast<std::size_t>(index);
+      const auto t = std::clamp(nodeSpeed[nodeIndex] / static_cast<float>(peakSpeed), 0.0F, 1.0F);
+      scratch.push_back(MeshVertex2D{
+        .point = grid.nodes[nodeIndex],
+        .color = viridisColor(t, 0.55F),
+      });
     }
   }
 
-  drawSession.drawColoredVertices(vertices, GL_TRIANGLES);
-
-  drawSession.setAlpha(1.0F);
-  drawSession.setUseVertexColor(false);
+  meshRenderer.drawTriangles(std::span<const MeshVertex2D>{scratch.data(), scratch.size()},
+                             viewport);
 }
 
 void
 drawStreamlines(const core::FlowResults& flow,
                 const RenderSettings& settings,
-                const DrawSession& drawSession,
-                double peakSpeed) noexcept
+                double peakSpeed,
+                const PlotViewport& viewport,
+                SdfLineRenderer2D& lineRenderer,
+                std::vector<LineSegment2D>& scratch) noexcept
 {
-  drawSession.setLineWidth(settings.streamlineWidth + 0.4F);
+  const auto thickness = std::max(settings.streamlineWidth + 0.4F, 1.0F);
 
   if (settings.colorStreamlinesBySpeed && !flow.velocities.empty()) {
-    drawSession.setUseVertexColor(true);
-
-    auto& vertices = drawSession.scratch();
-    for (const auto& vel : flow.velocities) {
-      if (vel.samples.size() < 2U) {
+    scratch.clear();
+    for (const auto& velocity : flow.velocities) {
+      if (velocity.samples.size() < 2U) {
         continue;
       }
-      vertices.clear();
-      vertices.reserve(vel.samples.size() * 5U);
-      for (const auto& sample : vel.samples) {
-        const auto t = static_cast<float>(std::clamp(sample.speed / peakSpeed, 0.0, 1.0));
-        appendColoredVertex(vertices, sample.point.x(), sample.point.y(), viridisColor(t));
+      for (std::size_t i = 1U; i < velocity.samples.size(); ++i) {
+        const auto& a = velocity.samples[i - 1U];
+        const auto& b = velocity.samples[i];
+        const auto speed = 0.5 * (a.speed + b.speed);
+        scratch.push_back(LineSegment2D{
+          .a = a.point,
+          .b = b.point,
+          .style =
+            LineStyle{
+              .color =
+                viridisColor(static_cast<float>(std::clamp(speed / peakSpeed, 0.0, 1.0)), 0.92F),
+              .thicknessPx = thickness,
+            },
+          .dashOffsetPx = 0.0,
+        });
       }
-      drawSession.drawColoredVertices(vertices, GL_LINE_STRIP);
     }
-
-    drawSession.setUseVertexColor(false);
+    lineRenderer.drawSegments(std::span<const LineSegment2D>{scratch.data(), scratch.size()},
+                              viewport);
     return;
   }
 
   for (const auto& streamline : flow.streamlines) {
-    if (streamline.points.size() < 2U) {
-      continue;
-    }
-    drawSession.setColor(viridisColor(static_cast<float>(streamline.psiLevel)));
-    drawSession.drawPolyline(streamline.points);
+    const auto style = LineStyle{
+      .color = viridisColor(static_cast<float>(streamline.psiLevel), 0.90F),
+      .thicknessPx = thickness,
+    };
+    lineRenderer.drawPolyline(streamline.points, style, viewport);
   }
 }
 
 void
 drawMeanLine(const core::FlowResults& flow,
              const RenderSettings& settings,
-             const DrawSession& drawSession) noexcept
+             const PlotViewport& viewport,
+             SdfLineRenderer2D& lineRenderer) noexcept
 {
-  const auto& midPoints = flow.areaProfile.midPoints;
-  if (midPoints.size() < 2U) {
+  const auto& points = flow.areaProfile.midPoints;
+  if (points.size() < 2U) {
     return;
   }
 
-  constexpr int kDashOn = 5;
-  constexpr int kDashPeriod = 8;
-
-  drawSession.setLineWidth(settings.meanLineWidth);
-  drawSession.setColor(kMeanLineColor);
-
-  auto dashSegment = std::vector<math::Vec2>{};
-  dashSegment.reserve(static_cast<std::size_t>(kDashOn));
-
-  for (auto index = std::size_t{0}; index < midPoints.size(); ++index) {
-    const auto phase = static_cast<int>(index % static_cast<std::size_t>(kDashPeriod));
-    if (phase < kDashOn) {
-      dashSegment.push_back(midPoints[index]);
-      continue;
-    }
-
-    if (dashSegment.size() >= 2U) {
-      drawSession.drawPolyline(dashSegment);
-    }
-    dashSegment.clear();
-  }
-
-  if (dashSegment.size() >= 2U) {
-    drawSession.drawPolyline(dashSegment);
-  }
+  const auto style = LineStyle{
+    .color = kMeanLineColor,
+    .thicknessPx = std::max(settings.meanLineWidth, 1.0F),
+    .dashPeriodPx = 16.0F,
+    .dashDuty = 0.58F,
+  };
+  lineRenderer.drawPolyline(points, style, viewport);
 }
 
 void
 drawGeometryCurves(const core::MeridionalGeometry& geom,
                    const RenderSettings& settings,
-                   const DrawSession& drawSession) noexcept
+                   const PlotViewport& viewport,
+                   SdfLineRenderer2D& lineRenderer) noexcept
 {
-  drawSession.setLineWidth(settings.hubLineWidth);
-  drawSession.setColor(kHubColor);
-  drawSession.drawPolyline(geom.hubCurve);
-
-  drawSession.setLineWidth(settings.shroudLineWidth);
-  drawSession.setColor(kShroudColor);
-  drawSession.drawPolyline(geom.shroudCurve);
+  const auto hubStyle = LineStyle{
+    .color = kHubColor,
+    .thicknessPx = std::max(settings.hubLineWidth, 1.0F),
+    .outlineColor = kContourOutlineColor,
+    .outlineThicknessPx = std::max(settings.hubLineWidth + 2.0F, 1.0F),
+  };
+  const auto shroudStyle = LineStyle{
+    .color = kShroudColor,
+    .thicknessPx = std::max(settings.shroudLineWidth, 1.0F),
+    .outlineColor = kContourOutlineColor,
+    .outlineThicknessPx = std::max(settings.shroudLineWidth + 2.0F, 1.0F),
+  };
+  lineRenderer.drawPolyline(geom.hubCurve, hubStyle, viewport);
+  lineRenderer.drawPolyline(geom.shroudCurve, shroudStyle, viewport);
 }
 
-}
-
-GeometryRenderer::~GeometryRenderer()
-{
-  destroy();
-}
-
-GeometryRenderer::GeometryRenderer(GeometryRenderer&& other) noexcept
-  : vao_(std::exchange(other.vao_, 0U)),
-    vbo_(std::exchange(other.vbo_, 0U)),
-    shaderProgram_(std::exchange(other.shaderProgram_, 0U)),
-    viewportUniformLocation_(std::exchange(other.viewportUniformLocation_, -1)),
-    colorUniformLocation_(std::exchange(other.colorUniformLocation_, -1)),
-    useVertexColorUniformLocation_(std::exchange(other.useVertexColorUniformLocation_, -1)),
-    alphaUniformLocation_(std::exchange(other.alphaUniformLocation_, -1)),
-    maxLineWidth_(std::exchange(other.maxLineWidth_, kDefaultLineWidth))
-{
-}
-
-GeometryRenderer&
-GeometryRenderer::operator=(GeometryRenderer&& other) noexcept
-{
-  if (this != &other) {
-    destroy();
-    vao_ = std::exchange(other.vao_, 0U);
-    vbo_ = std::exchange(other.vbo_, 0U);
-    shaderProgram_ = std::exchange(other.shaderProgram_, 0U);
-    viewportUniformLocation_ = std::exchange(other.viewportUniformLocation_, -1);
-    colorUniformLocation_ = std::exchange(other.colorUniformLocation_, -1);
-    useVertexColorUniformLocation_ = std::exchange(other.useVertexColorUniformLocation_, -1);
-    alphaUniformLocation_ = std::exchange(other.alphaUniformLocation_, -1);
-    maxLineWidth_ = std::exchange(other.maxLineWidth_, kDefaultLineWidth);
-  }
-  return *this;
-}
-
-bool
-GeometryRenderer::isReady() const noexcept
-{
-  return vao_ != 0U && vbo_ != 0U && shaderProgram_ != 0U && viewportUniformLocation_ >= 0 &&
-         colorUniformLocation_ >= 0 && useVertexColorUniformLocation_ >= 0 &&
-         alphaUniformLocation_ >= 0;
-}
+} // namespace
 
 void
-GeometryRenderer::initGl() noexcept
+GeometryRenderer::clear(int viewportWidth, int viewportHeight) noexcept
 {
-  destroy();
-
-  const auto vertShader = compileShader(GL_VERTEX_SHADER, kVertexShaderSource);
-  if (vertShader == 0U) {
+  if (viewportWidth <= 0 || viewportHeight <= 0) {
     return;
   }
-
-  const auto fragShader = compileShader(GL_FRAGMENT_SHADER, kFragmentShaderSource);
-  if (fragShader == 0U) {
-    glDeleteShader(vertShader);
-    return;
-  }
-
-  const auto shaderProgram = glCreateProgram();
-  if (shaderProgram == 0U) {
-    glDeleteShader(vertShader);
-    glDeleteShader(fragShader);
-    return;
-  }
-
-  glAttachShader(shaderProgram, vertShader);
-  glAttachShader(shaderProgram, fragShader);
-  glLinkProgram(shaderProgram);
-
-  auto linkSuccess = GLint{};
-  glGetProgramiv(shaderProgram, GL_LINK_STATUS, &linkSuccess);
-
-  glDeleteShader(vertShader);
-  glDeleteShader(fragShader);
-
-  if (linkSuccess == GL_FALSE) {
-    glDeleteProgram(shaderProgram);
-    return;
-  }
-
-  const auto viewportUniformLocation = glGetUniformLocation(shaderProgram, "uViewport");
-  const auto colorUniformLocation = glGetUniformLocation(shaderProgram, "uColor");
-  const auto useVertexColorUniformLocation = glGetUniformLocation(shaderProgram, "uUseVertexColor");
-  const auto alphaUniformLocation = glGetUniformLocation(shaderProgram, "uAlpha");
-  if (viewportUniformLocation < 0 || colorUniformLocation < 0 ||
-      useVertexColorUniformLocation < 0 || alphaUniformLocation < 0) {
-    glDeleteProgram(shaderProgram);
-    return;
-  }
-
-  auto vao = GLuint{};
-  auto vbo = GLuint{};
-  glGenVertexArrays(1, &vao);
-  glGenBuffers(1, &vbo);
-
-  if (vao == 0U || vbo == 0U) {
-    if (vao != 0U) {
-      glDeleteVertexArrays(1, &vao);
-    }
-    if (vbo != 0U) {
-      glDeleteBuffers(1, &vbo);
-    }
-    glDeleteProgram(shaderProgram);
-    return;
-  }
-
-  glBindVertexArray(vao);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(2 * sizeof(float)), nullptr);
-  glEnableVertexAttribArray(0);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindVertexArray(0);
-
-  auto lineWidthRange = std::array<float, 2>{kDefaultLineWidth, kDefaultLineWidth};
-  glGetFloatv(GL_SMOOTH_LINE_WIDTH_RANGE, lineWidthRange.data());
-
-  vao_ = vao;
-  vbo_ = vbo;
-  shaderProgram_ = shaderProgram;
-  viewportUniformLocation_ = viewportUniformLocation;
-  colorUniformLocation_ = colorUniformLocation;
-  useVertexColorUniformLocation_ = useVertexColorUniformLocation;
-  alphaUniformLocation_ = alphaUniformLocation;
-  maxLineWidth_ = std::max(lineWidthRange[1], kDefaultLineWidth);
+  const auto state = ScopedGlState2D{};
+  state.beginFrame(
+    viewportWidth, viewportHeight, kBackground.r, kBackground.g, kBackground.b, kBackground.a);
 }
 
 ViewportMap
@@ -781,72 +334,38 @@ GeometryRenderer::render(const core::MeridionalGeometry& geom,
     return {};
   }
 
-  if (!isReady()) {
-    initGl();
-    if (!isReady()) {
-      return {};
-    }
-  }
+  const auto state = ScopedGlState2D{};
+  state.beginFrame(
+    viewportWidth, viewportHeight, kBackground.r, kBackground.g, kBackground.b, kBackground.a);
 
-  configureFrame(viewportWidth, viewportHeight);
-
-  if (geom.hubCurve.empty() && geom.shroudCurve.empty()) {
+  const auto viewport = PlotViewport::fromGeometry(geom, viewportWidth, viewportHeight);
+  if (!viewport.hasData()) {
     return {};
-  }
-
-  const auto viewport = makeViewport(geom, viewportWidth, viewportHeight);
-  const DrawUniforms uniforms{
-    .viewport = viewportUniformLocation_,
-    .color = colorUniformLocation_,
-    .useVertexColor = useVertexColorUniformLocation_,
-    .alpha = alphaUniformLocation_,
-  };
-  auto drawSession =
-    DrawSession{shaderProgram_, vao_, vbo_, uniforms, maxLineWidth_, scratchVertices_};
-  drawSession.setViewport(viewport);
-
-  if (settings.showCoordGrid) {
-    drawCoordinateGrid(viewport, drawSession);
-  }
-
-  if (settings.showComputationalGrid && flow != nullptr) {
-    drawComputationalGrid(*flow, drawSession);
   }
 
   if (flow != nullptr) {
     const double peakSpeed = maxStreamlineSpeed(*flow);
     if (settings.showVelocityHeatmap) {
-      drawVelocityHeatmap(*flow, peakSpeed, drawSession);
+      drawVelocityHeatmap(*flow, peakSpeed, viewport, meshRenderer_, meshScratch_);
     }
-    drawStreamlines(*flow, settings, drawSession, peakSpeed);
-    drawMeanLine(*flow, settings, drawSession);
   }
 
-  drawGeometryCurves(geom, settings, drawSession);
+  if (settings.showCoordGrid) {
+    drawCoordinateGrid(viewport, lineRenderer_, segmentScratch_);
+  }
 
-  return viewport.toMap(viewportWidth, viewportHeight);
+  if (settings.showComputationalGrid && flow != nullptr) {
+    drawComputationalGrid(*flow, viewport, lineRenderer_, segmentScratch_);
+  }
+
+  if (flow != nullptr) {
+    const double peakSpeed = maxStreamlineSpeed(*flow);
+    drawStreamlines(*flow, settings, peakSpeed, viewport, lineRenderer_, segmentScratch_);
+    drawMeanLine(*flow, settings, viewport, lineRenderer_);
+  }
+
+  drawGeometryCurves(geom, settings, viewport, lineRenderer_);
+  return viewport.toMap();
 }
 
-void
-GeometryRenderer::destroy() noexcept
-{
-  if (vao_ != 0U) {
-    glDeleteVertexArrays(1, &vao_);
-    vao_ = 0;
-  }
-  if (vbo_ != 0U) {
-    glDeleteBuffers(1, &vbo_);
-    vbo_ = 0;
-  }
-  if (shaderProgram_ != 0U) {
-    glDeleteProgram(shaderProgram_);
-    shaderProgram_ = 0;
-  }
-  viewportUniformLocation_ = -1;
-  colorUniformLocation_ = -1;
-  useVertexColorUniformLocation_ = -1;
-  alphaUniformLocation_ = -1;
-  maxLineWidth_ = kDefaultLineWidth;
-}
-
-}
+} // namespace ggm::gui

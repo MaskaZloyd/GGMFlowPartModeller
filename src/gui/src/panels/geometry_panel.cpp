@@ -3,7 +3,6 @@
 #include "core/flow_solver_types.hpp"
 #include "core/geometry.hpp"
 #include "layout/dock_utils.hpp"
-#include "renderer/gl_headers.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -256,10 +255,8 @@ drawSegmentJointMarkers(ImDrawList* dl,
     for (std::size_t index = 2U; index + 1U < curve.controlPoints.size(); index += 2U) {
       const auto& point = curve.controlPoints[index];
       const ImVec2 px = worldToPixel(point.x(), point.y(), imgMin, imgMax, vp);
-      dl->AddRectFilled(ImVec2(px.x - RADIUS, px.y - RADIUS),
-                        ImVec2(px.x + RADIUS, px.y + RADIUS),
-                        fill,
-                        1.5F);
+      dl->AddRectFilled(
+        ImVec2(px.x - RADIUS, px.y - RADIUS), ImVec2(px.x + RADIUS, px.y + RADIUS), fill, 1.5F);
       dl->AddRect(ImVec2(px.x - RADIUS, px.y - RADIUS),
                   ImVec2(px.x + RADIUS, px.y + RADIUS),
                   STROKE,
@@ -360,10 +357,9 @@ exportFboToPpm(const Fbo& fbo, const std::string& path)
   std::vector<unsigned char> pixels(static_cast<std::size_t>(width) *
                                     static_cast<std::size_t>(height) * 3U);
 
-  glBindTexture(GL_TEXTURE_2D, fbo.textureId());
-  glPixelStorei(GL_PACK_ALIGNMENT, 1);
-  glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
-  glBindTexture(GL_TEXTURE_2D, 0);
+  if (!fbo.readRgbPixels(pixels)) {
+    return false;
+  }
 
   std::ofstream out(path, std::ios::binary);
   if (!out) {
@@ -447,7 +443,7 @@ drawScaleBar(ImDrawList* dl, ImVec2 imgMin, ImVec2 imgMax, const ViewportMap& vp
   (void)imgH;
 }
 
-}
+} // namespace
 
 namespace {
 
@@ -504,7 +500,7 @@ drawActionBar(GeometryPanelState& state,
   }
 }
 
-}
+} // namespace
 
 void
 drawGeometryPanelWithTitle(const char* windowTitle,
@@ -542,8 +538,7 @@ drawGeometryPanelWithTitle(const char* windowTitle,
   if (geometryValid) {
     vp = renderer.render(geom, flow, renderSettings, panelWidth, panelHeight);
   } else {
-    glClearColor(0.988F, 0.990F, 0.994F, 1.0F);
-    glClear(GL_COLOR_BUFFER_BIT);
+    renderer.clear(panelWidth, panelHeight);
   }
   fbo.unbind();
 
@@ -592,4 +587,4 @@ drawGeometryPanel(Fbo& fbo,
     "Геометрия", fbo, renderer, state, geom, flow, renderSettings, geometryValid, dockspaceId);
 }
 
-}
+} // namespace ggm::gui

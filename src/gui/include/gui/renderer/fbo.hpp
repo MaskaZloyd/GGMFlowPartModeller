@@ -1,8 +1,10 @@
 #pragma once
 
 #include "core/error.hpp"
+#include "gui/renderer/opengl/render_target_2d.hpp"
 
 #include <utility>
+#include <vector>
 
 namespace ggm::gui {
 
@@ -25,24 +27,12 @@ public:
   /// Resolve MSAA -> colorTex_ and unbind.
   void unbind() noexcept;
 
-  [[nodiscard]] unsigned int textureId() const noexcept { return colorTex_; }
-  [[nodiscard]] std::pair<int, int> size() const noexcept { return {width_, height_}; }
+  [[nodiscard]] unsigned int textureId() const noexcept { return target_.textureId(); }
+  [[nodiscard]] std::pair<int, int> size() const noexcept { return target_.size(); }
+  [[nodiscard]] bool readRgbPixels(std::vector<unsigned char>& pixels) const noexcept;
 
 private:
-  void destroy() noexcept;
-
-  /// Multisampled target (render here):
-  unsigned int msFbo_ = 0;
-  unsigned int msColorRbo_ = 0;
-  unsigned int msDepthRbo_ = 0;
-
-  /// Resolve target (blitted into and displayed by ImGui):
-  unsigned int fbo_ = 0;
-  unsigned int colorTex_ = 0;
-
-  int width_ = 0;
-  int height_ = 0;
-  int samples_ = 4;
+  RenderTarget2D target_{4};
 };
 
-}
+} // namespace ggm::gui
