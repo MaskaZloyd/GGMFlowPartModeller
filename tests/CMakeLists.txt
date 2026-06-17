@@ -45,6 +45,7 @@ catch_discover_tests(test_core)
 # ---------------------------------------------------------------------------
 add_executable(test_gui_commands
     test_gui_undo_stack.cpp
+    test_gui_geometry_rendering.cpp
 )
 target_link_libraries(test_gui_commands PRIVATE Catch2::Catch2WithMain gui)
 ggm_copy_runtime_dlls(test_gui_commands)
